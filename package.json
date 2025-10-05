@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "npm install && cd frontend && npm install && npm run build && cd .. && if exist build rmdir /s /q build && mkdir build && xcopy /E /I frontend\\build build",
+    "build": "npm install && cd frontend && npm install && npm run build && cd .. && rm -rf build && mkdir build && cp -r frontend/build/* build/",
     "build:frontend": "cd frontend && npm run build",
     "copy:build": "mkdir -p build && cp -r frontend/build/* build/",
     "test": "echo \"No tests specified\" && exit 0"
