@@ -1,0 +1,87 @@
+/* Animations pour la bannière AYNEXT */
+
+@keyframes aynextGlow {
+  0%, 100% {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.6), 0 0 30px rgba(255, 255, 255, 0.3);
+  }
+}
+
+@keyframes aynextSlide {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes aynextFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes aynextFade {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.aynext-title {
+  animation: aynextGlow 3s ease-in-out infinite, aynextFloat 4s ease-in-out infinite;
+}
+
+.aynext-subtitle {
+  animation: aynextFade 2s ease-in-out infinite;
+}
+
+.aynext-slide {
+  animation: aynextSlide 8s linear infinite;
+}
+
+.aynext-slide:nth-child(2) {
+  animation-delay: 2s;
+}
+
+.aynext-slide:nth-child(3) {
+  animation-delay: 4s;
+}
+
+.aynext-slide:nth-child(4) {
+  animation-delay: 6s;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .aynext-title {
+    font-size: 2.5rem;
+  }
+  
+  .aynext-subtitle {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .aynext-title {
+    font-size: 2rem;
+  }
+  
+  .aynext-subtitle {
+    font-size: 0.7rem;
+  }
+}
