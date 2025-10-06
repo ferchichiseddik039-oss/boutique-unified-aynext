@@ -169,6 +169,45 @@ export const CartProvider = ({ children }) => {
     }
   };
 
+  // Créer/mettre à jour le panier via API
+  const createOrUpdateCart = async (cartData) => {
+    try {
+      setLoading(true);
+      const res = await api.post('/api/cart', cartData);
+      
+      if (res.data.success) {
+        setCart(ensureValidCart(res.data.cart || cartData));
+        toast.success('Panier mis à jour !');
+        return { success: true };
+      }
+    } catch (err) {
+      const message = err.response?.data?.message || 'Erreur lors de la mise à jour du panier';
+      toast.error(message);
+      return { success: false, message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Récupérer le panier via API
+  const getCartFromApi = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/api/cart');
+      
+      if (res.data.success) {
+        setCart(ensureValidCart(res.data.cart));
+        return { success: true, cart: res.data.cart };
+      }
+    } catch (err) {
+      const message = err.response?.data?.message || 'Erreur lors de la récupération du panier';
+      console.error(message);
+      return { success: false, message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Calculer le total du panier
   const getTotal = () => {
     if (!cart || !cart.articles || !Array.isArray(cart.articles)) {
@@ -202,6 +241,8 @@ export const CartProvider = ({ children }) => {
     updateQuantity,
     removeFromCart,
     clearCart,
+    createOrUpdateCart,
+    getCartFromApi,
     getTotal,
     getItemCount,
     isEmpty,

@@ -2033,8 +2033,387 @@ app.delete('/api/orders/:orderId', async (req, res) => {
 });
 
 // ================================
-// ENDPOINTS MANQUANTS CRITIQUES
+// SYSTÈME COMPLET - TOUS LES ENDPOINTS
 // ================================
+
+// 🏥 ENDPOINTS DE SANTÉ ET TEST
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    version: '1.0.0'
+  });
+});
+
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'API Test successful',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+app.get('/api/mongodb-test', async (req, res) => {
+  try {
+    console.log('🔍 API /api/mongodb-test appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    let mongoStatus = 'disconnected';
+    let productCount = 0;
+    let userCount = 0;
+    let orderCount = 0;
+    
+    if (mongoConnected) {
+      mongoStatus = 'connected';
+      try {
+        productCount = await Product.countDocuments();
+        userCount = await User.countDocuments();
+        orderCount = await Order.countDocuments();
+      } catch (error) {
+        console.error('❌ Erreur comptage documents:', error);
+      }
+    }
+    
+    res.json({
+      success: true,
+      mongoStatus,
+      productCount,
+      userCount,
+      orderCount,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Erreur test MongoDB:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// 🔐 ENDPOINTS D'AUTHENTIFICATION COMPLETS
+app.get('/api/auth/check', async (req, res) => {
+  try {
+    console.log('🔍 API /api/auth/check appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const token = req.headers['x-auth-token'];
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Token manquant' });
+    }
+    
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_2024');
+      let user;
+      
+      if (mongoConnected) {
+        user = await User.findById(decoded.userId).select('-motDePasse');
+      } else {
+        user = fallbackAdmin;
+      }
+      
+      if (!user) {
+        return res.status(401).json({ success: false, message: 'Utilisateur non trouvé' });
+      }
+      
+      res.json({ success: true, user });
+    } catch (jwtError) {
+      res.status(401).json({ success: false, message: 'Token invalide' });
+    }
+  } catch (error) {
+    console.error('❌ Erreur auth check:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/auth/check', async (req, res) => {
+  try {
+    console.log('🔍 API /auth/check appelée (sans /api)');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const token = req.headers['x-auth-token'];
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Token manquant' });
+    }
+    
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_2024');
+      let user;
+      
+      if (mongoConnected) {
+        user = await User.findById(decoded.userId).select('-motDePasse');
+      } else {
+        user = fallbackAdmin;
+      }
+      
+      if (!user) {
+        return res.status(401).json({ success: false, message: 'Utilisateur non trouvé' });
+      }
+      
+      res.json({ success: true, user });
+    } catch (jwtError) {
+      res.status(401).json({ success: false, message: 'Token invalide' });
+    }
+  } catch (error) {
+    console.error('❌ Erreur auth check:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/auth/inscription', async (req, res) => {
+  try {
+    console.log('🔍 API /api/auth/inscription appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { email, motDePasse, nom, prenom } = req.body;
+    
+    // Vérifier si l'utilisateur existe déjà
+    let existingUser;
+    if (mongoConnected) {
+      existingUser = await User.findOne({ email });
+    } else {
+      existingUser = fallbackAdmin.email === email ? fallbackAdmin : null;
+    }
+    
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'Cet email est déjà utilisé' });
+    }
+    
+    // Créer le nouvel utilisateur
+    const hashedPassword = await bcrypt.hash(motDePasse, 10);
+    const newUser = {
+      email,
+      motDePasse: hashedPassword,
+      nom: nom || '',
+      prenom: prenom || '',
+      role: 'client'
+    };
+    
+    if (mongoConnected) {
+      const user = new User(newUser);
+      await user.save();
+      console.log('👤 Nouvel utilisateur créé:', user.email);
+    } else {
+      console.log('👤 Nouvel utilisateur créé (fallback):', newUser.email);
+    }
+    
+    res.status(201).json({ success: true, message: 'Inscription réussie' });
+  } catch (error) {
+    console.error('❌ Erreur inscription:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/auth/inscription', async (req, res) => {
+  try {
+    console.log('🔍 API /auth/inscription appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { email, motDePasse, nom, prenom } = req.body;
+    
+    // Vérifier si l'utilisateur existe déjà
+    let existingUser;
+    if (mongoConnected) {
+      existingUser = await User.findOne({ email });
+    } else {
+      existingUser = fallbackAdmin.email === email ? fallbackAdmin : null;
+    }
+    
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'Cet email est déjà utilisé' });
+    }
+    
+    // Créer le nouvel utilisateur
+    const hashedPassword = await bcrypt.hash(motDePasse, 10);
+    const newUser = {
+      email,
+      motDePasse: hashedPassword,
+      nom: nom || '',
+      prenom: prenom || '',
+      role: 'client'
+    };
+    
+    if (mongoConnected) {
+      const user = new User(newUser);
+      await user.save();
+      console.log('👤 Nouvel utilisateur créé:', user.email);
+    } else {
+      console.log('👤 Nouvel utilisateur créé (fallback):', newUser.email);
+    }
+    
+    res.status(201).json({ success: true, message: 'Inscription réussie' });
+  } catch (error) {
+    console.error('❌ Erreur inscription:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/auth/connexion', async (req, res) => {
+  try {
+    console.log('🔍 API /api/auth/connexion appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { email, motDePasse } = req.body;
+    
+    // Trouver l'utilisateur
+    let user;
+    if (mongoConnected) {
+      user = await User.findOne({ email });
+    } else {
+      user = fallbackAdmin.email === email ? fallbackAdmin : null;
+    }
+    
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
+    }
+    
+    // Vérifier le mot de passe
+    const isPasswordValid = await bcrypt.compare(motDePasse, user.motDePasse);
+    if (!isPasswordValid) {
+      return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
+    }
+    
+    // Générer le token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'fallback_secret_key_2024',
+      { expiresIn: '1h' }
+    );
+    
+    console.log('🔐 Connexion réussie:', user.email);
+    res.json({ success: true, message: 'Connexion réussie', token });
+  } catch (error) {
+    console.error('❌ Erreur connexion:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/auth/connexion', async (req, res) => {
+  try {
+    console.log('🔍 API /auth/connexion appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { email, motDePasse } = req.body;
+    
+    // Trouver l'utilisateur
+    let user;
+    if (mongoConnected) {
+      user = await User.findOne({ email });
+    } else {
+      user = fallbackAdmin.email === email ? fallbackAdmin : null;
+    }
+    
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
+    }
+    
+    // Vérifier le mot de passe
+    const isPasswordValid = await bcrypt.compare(motDePasse, user.motDePasse);
+    if (!isPasswordValid) {
+      return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
+    }
+    
+    // Générer le token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'fallback_secret_key_2024',
+      { expiresIn: '1h' }
+    );
+    
+    console.log('🔐 Connexion réussie:', user.email);
+    res.json({ success: true, message: 'Connexion réussie', token });
+  } catch (error) {
+    console.error('❌ Erreur connexion:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/auth/connexion-admin', async (req, res) => {
+  try {
+    console.log('🔍 API /api/auth/connexion-admin appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { email, motDePasse } = req.body;
+    
+    // Trouver l'utilisateur admin
+    let user;
+    if (mongoConnected) {
+      user = await User.findOne({ email, role: 'admin' });
+    } else {
+      user = fallbackAdmin.email === email ? fallbackAdmin : null;
+    }
+    
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Accès non autorisé' });
+    }
+    
+    // Vérifier le mot de passe
+    const isPasswordValid = await bcrypt.compare(motDePasse, user.motDePasse);
+    if (!isPasswordValid) {
+      return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
+    }
+    
+    // Générer le token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'fallback_secret_key_2024',
+      { expiresIn: '1h' }
+    );
+    
+    console.log('🔐 Connexion admin réussie:', user.email);
+    res.json({ success: true, message: 'Connexion admin réussie', token });
+  } catch (error) {
+    console.error('❌ Erreur connexion admin:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
 
 // Orders admin toutes endpoint (sans /api)
 app.get('/orders/admin/toutes', async (req, res) => {

@@ -47,6 +47,39 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Test de santé de l'API
+  const checkApiHealth = async () => {
+    try {
+      const res = await api.get('/api/health');
+      return res.data;
+    } catch (err) {
+      console.error('Erreur test santé API:', err);
+      throw err;
+    }
+  };
+
+  // Test de l'API
+  const testApi = async () => {
+    try {
+      const res = await api.get('/api/test');
+      return res.data;
+    } catch (err) {
+      console.error('Erreur test API:', err);
+      throw err;
+    }
+  };
+
+  // Test MongoDB
+  const testMongoDB = async () => {
+    try {
+      const res = await api.get('/api/mongodb-test');
+      return res.data;
+    } catch (err) {
+      console.error('Erreur test MongoDB:', err);
+      throw err;
+    }
+  };
+
   // Inscription
   const register = async (userData) => {
     try {
@@ -174,6 +207,9 @@ export const AuthProvider = ({ children }) => {
     updateProfile,
     changePassword,
     setAuthToken,
+    checkApiHealth,
+    testApi,
+    testMongoDB,
     isAuthenticated: !!token,
     isAdmin: user?.role === 'admin'
   };
