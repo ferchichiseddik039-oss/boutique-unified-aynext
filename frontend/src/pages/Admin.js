@@ -4,6 +4,7 @@ import { FaPlus, FaEdit, FaTrash, FaEye, FaUsers, FaBox, FaShoppingCart, FaChart
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { formatBrand } from '../utils/formatUtils';
 import SettingsTab from '../components/SettingsTab';
 import api from '../config/axios';
@@ -165,17 +166,13 @@ const Admin = () => {
       setLoading(true);
       
       // Charger les statistiques
-      const statsResponse = await fetch('/api/admin/stats', {
-        headers: {
-          'x-auth-token': localStorage.getItem('token')
-        }
-      });
+      const statsResponse = await api.get('/api/admin/stats');
       
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
+      if (statsResponse.data.success) {
+        const statsData = statsResponse.data;
         console.log('📊 Statistiques initiales chargées:', statsData);
-        console.log('📦 Nombre de produits initial:', statsData.totalProducts);
-        setStats(statsData);
+        console.log('📦 Nombre de produits initial:', statsData.stats?.totalProducts);
+        setStats(statsData.stats);
       }
 
       // Charger les produits
@@ -227,16 +224,12 @@ const Admin = () => {
       if (search) params.append('recherche', search);
       if (role) params.append('role', role);
 
-      const response = await fetch(`/api/users/admin/tous?${params}`, {
-        headers: {
-          'x-auth-token': localStorage.getItem('token')
-        }
-      });
+      const response = await api.get(`/api/users/admin/tous?${params}`);
       
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data.utilisateurs);
-        setUsersPagination(data.pagination);
+      if (response.data.success) {
+        const data = response.data;
+        setUsers(data.users || data.utilisateurs || []);
+        setUsersPagination(data.pagination || { total: data.total || 0, totalPages: data.totalPages || 1 });
       } else {
         toast.error('Erreur lors du chargement des utilisateurs');
       }

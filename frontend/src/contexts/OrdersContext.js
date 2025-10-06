@@ -38,14 +38,7 @@ export const OrdersProvider = ({ children }) => {
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 secondes max
       
       try {
-        const response = await fetch('/api/orders', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-auth-token': token
-          },
-          signal: controller.signal
-        });
+        const response = await api.get('/api/orders');
         
         clearTimeout(timeoutId);
         
@@ -60,14 +53,14 @@ export const OrdersProvider = ({ children }) => {
           return;
         }
         
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        if (response.data.success) {
+          const data = response.data;
+          console.log(`✅ ${data.orders?.length || 0} commande(s) récupérée(s)`);
+          console.log('📋 Données reçues:', data);
+          setOrders(data.orders || data.commandes || []);
+        } else {
+          throw new Error('Erreur lors du chargement des commandes');
         }
-        
-        const data = await response.json();
-        console.log(`✅ ${data.length} commande(s) récupérée(s)`);
-        console.log('📋 Données reçues:', data);
-        setOrders(data);
         
       } catch (fetchError) {
         clearTimeout(timeoutId);
