@@ -25,20 +25,24 @@ npm install ajv@^8.0.0
 echo "📦 Installation de toutes les dépendances..."
 npm install
 
-# Étape 6: Build du frontend
+# Étape 6: Donner les permissions d'exécution
+echo "🔐 Attribution des permissions d'exécution..."
+chmod +x ./node_modules/.bin/react-scripts
+
+# Étape 7: Build du frontend
 echo "🏗️ Build du frontend React..."
 CI=false npm run build
 
-# Étape 7: Retour à la racine
+# Étape 8: Retour à la racine
 echo "📁 Retour à la racine..."
 cd ..
 
-# Étape 8: Nettoyer et créer le dossier build
+# Étape 9: Nettoyer et créer le dossier build
 echo "🧹 Préparation du dossier build..."
 rm -rf build
 mkdir build
 
-# Étape 9: Copier les fichiers buildés
+# Étape 10: Copier les fichiers buildés
 echo "📋 Copie des fichiers buildés..."
 cp -r frontend/build/* build/
 
