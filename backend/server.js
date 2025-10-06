@@ -9,6 +9,7 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
+
 let mongoConnected = false;
 
 // MongoDB Connection
@@ -26,17 +27,30 @@ mongoose.connect(process.env.MONGODB_URI, {
   mongoConnected = false;
 });
 
-// Middleware CORS
+// Configuration CORS propre
+const allowedOrigins = [
+  "https://boutique-unified-aynext.onrender.com",
+  "http://localhost:3000",
+  "http://localhost:5001"
+];
+
 app.use(cors({
-  origin: [
-    "https://boutique-unified-aynext.onrender.com", // Frontend Render
-    "http://localhost:3000", // Local development
-    "http://localhost:5001"  // Local development alternative
-  ],
+  origin: function(origin, callback){
+    // Permet requêtes depuis Postman ou scripts backend qui n'ont pas d'origine
+    if(!origin) return callback(null, true);
+    if(allowedOrigins.indexOf(origin) === -1){
+      const msg = 'CORS policy: cette origine n\'est pas autorisée.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"],
   credentials: true
 }));
+
+// Preflight pour toutes les routes
+app.options("*", cors());
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
