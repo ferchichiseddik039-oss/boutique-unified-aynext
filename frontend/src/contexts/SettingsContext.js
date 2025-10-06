@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../config/axios';
+import { toast } from 'react-toastify';
 
 const SettingsContext = createContext();
 
@@ -12,191 +13,228 @@ export const useSettings = () => {
 };
 
 export const SettingsProvider = ({ children }) => {
-  const [settings, setSettings] = useState({
-    informationsGenerales: {
-      nomBoutique: 'AYNEXT',
-      description: 'Boutique de vêtements tendance',
-      email: 'contact@aynext.com',
-      telephone: '+216 XX XXX XXX',
-      adresse: {
-        rue: 'Rue de la Mode',
-        ville: 'Tunis',
-        codePostal: '1000',
-        pays: 'Tunisie'
-      },
-      logo: ''
-    },
-    livraison: {
-      fraisLivraison: 5.9,
-      fraisLivraisonGratuite: 100,
-      delaiLivraison: '3-5 jours ouvrables',
-      zonesLivraison: [],
-      livraisonGratuite: true
-    },
-    paiement: {
-      methodesActives: ['carte', 'paypal', 'virement', 'especes'],
-      informationsPaiement: {
-        carte: {
-          active: true,
-          nom: 'Carte bancaire',
-          description: 'Visa, Mastercard, American Express'
-        },
-        paypal: {
-          active: true,
-          nom: 'PayPal',
-          description: 'Paiement sécurisé via PayPal'
-        },
-        virement: {
-          active: true,
-          nom: 'Virement bancaire',
-          description: 'Virement bancaire direct'
-        },
-        especes: {
-          active: true,
-          nom: 'Espèces à la livraison',
-          description: 'Paiement en espèces lors de la livraison'
-        }
-      }
-    },
-    general: {
-      devise: 'TND',
-      langue: 'fr',
-      maintenance: {
-        active: false,
-        message: 'Site en maintenance. Revenez bientôt !'
-      }
-    }
-  });
+  const [settings, setSettings] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Charger les paramètres au démarrage
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  const fetchSettings = async () => {
+  // ⚙️ APPELS API PARAMÈTRES
+  const getSettings = async () => {
     try {
       setLoading(true);
-      setError(null);
-      const response = await api.get('/settings');
-      setSettings(response.data);
-    } catch (error) {
-      console.error('Erreur lors du chargement des paramètres:', error);
-      setError('Erreur lors du chargement des paramètres');
-      // Garder les paramètres par défaut en cas d'erreur
+      const res = await api.get('/api/settings');
+      if (res.data.success) {
+        setSettings(res.data.settings);
+        return res.data;
+      }
+    } catch (err) {
+      console.error('Erreur récupération paramètres:', err);
+      throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  // Fonction pour obtenir les méthodes de paiement actives
-  const getActivePaymentMethods = () => {
-    if (!settings.paiement || !settings.paiement.methodesActives) {
-      return ['carte', 'paypal', 'virement', 'especes'];
-    }
-    
-    return settings.paiement.methodesActives.map(method => ({
-      value: method,
-      label: settings.paiement.informationsPaiement[method]?.nom || method,
-      description: settings.paiement.informationsPaiement[method]?.description || ''
-    }));
-  };
-
-  // Fonction pour calculer les frais de livraison
-  const calculateDeliveryFees = (subtotal) => {
-    if (!settings.livraison) {
-      return 5.9; // Valeur par défaut
-    }
-
-    const { fraisLivraison, fraisLivraisonGratuite, livraisonGratuite } = settings.livraison;
-    
-    // Si la livraison gratuite est activée et le montant atteint le seuil
-    if (livraisonGratuite && subtotal >= fraisLivraisonGratuite) {
-      return 0;
-    }
-    
-    return fraisLivraison;
-  };
-
-  // Fonction pour obtenir les informations de livraison
-  const getDeliveryInfo = () => {
-    if (!settings.livraison) {
-      return {
-        frais: 5.9,
-        delai: '3-5 jours ouvrables',
-        livraisonGratuite: true,
-        seuil: 100
-      };
-    }
-
-    return {
-      frais: settings.livraison.fraisLivraison,
-      delai: settings.livraison.delaiLivraison,
-      livraisonGratuite: settings.livraison.livraisonGratuite,
-      seuil: settings.livraison.fraisLivraisonGratuite
-    };
-  };
-
-  // Fonction pour vérifier si le site est en maintenance
-  const isMaintenanceMode = () => {
-    return settings.general?.maintenance?.active || false;
-  };
-
-  // Fonction pour obtenir le message de maintenance
-  const getMaintenanceMessage = () => {
-    return settings.general?.maintenance?.message || 'Site en maintenance. Revenez bientôt !';
-  };
-
-  // Fonction pour obtenir la devise
-  const getCurrency = () => {
-    return settings.general?.devise || 'TND';
-  };
-
-  // Fonction pour obtenir la langue
-  const getLanguage = () => {
-    return settings.general?.langue || 'fr';
-  };
-
-  // Fonction pour obtenir les informations de la boutique
-  const getShopInfo = () => {
-    return settings.informationsGenerales || {
-      nomBoutique: 'AYNEXT',
-      description: 'Boutique de vêtements tendance',
-      email: 'contact@aynext.com',
-      telephone: '+216 XX XXX XXX'
-    };
-  };
-
-  // Fonction pour mettre à jour les paramètres (pour les admins)
-  const updateSettings = async (newSettings) => {
+  const updateSettings = async (settingsData) => {
     try {
-      setError(null);
-      const response = await api.put('/settings', newSettings);
-      setSettings(response.data.settings);
-      return { success: true, data: response.data };
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour des paramètres:', error);
-      setError('Erreur lors de la mise à jour des paramètres');
-      return { success: false, error: error.response?.data?.message || 'Erreur inconnue' };
+      setLoading(true);
+      const res = await api.put('/api/settings', settingsData);
+      if (res.data.success) {
+        setSettings(prev => ({ ...prev, ...settingsData }));
+        toast.success('Paramètres mis à jour !');
+        return res.data;
+      }
+    } catch (err) {
+      const message = err.response?.data?.message || 'Erreur lors de la mise à jour des paramètres';
+      toast.error(message);
+      throw err;
+    } finally {
+      setLoading(false);
     }
   };
+
+  const updateSettingsSection = async (section, sectionData) => {
+    try {
+      setLoading(true);
+      const res = await api.put(`/api/settings/${section}`, sectionData);
+      if (res.data.success) {
+        setSettings(prev => ({ ...prev, [section]: { ...prev[section], ...sectionData } }));
+        toast.success(`Section ${section} mise à jour !`);
+        return res.data;
+      }
+    } catch (err) {
+      const message = err.response?.data?.message || 'Erreur lors de la mise à jour de la section';
+      toast.error(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const testSettings = async (testData) => {
+    try {
+      const res = await api.put('/settings/test', testData);
+      return res.data;
+    } catch (err) {
+      console.error('Erreur test paramètres:', err);
+      throw err;
+    }
+  };
+
+  const resetSettings = async () => {
+    try {
+      setLoading(true);
+      const res = await api.post('/settings/reset');
+      if (res.data.success) {
+        setSettings(null);
+        toast.success('Paramètres réinitialisés !');
+        return res.data;
+      }
+    } catch (err) {
+      const message = err.response?.data?.message || 'Erreur lors de la réinitialisation';
+      toast.error(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 📊 APPELS API STATISTIQUES
+  const getStats = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/api/stats');
+      if (res.data.success) {
+        setStats(res.data.stats);
+        return res.data;
+      }
+    } catch (err) {
+      console.error('Erreur récupération statistiques:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getBasicStats = async () => {
+    try {
+      const res = await api.get('/stats');
+      return res.data;
+    } catch (err) {
+      console.error('Erreur récupération stats de base:', err);
+      throw err;
+    }
+  };
+
+  const getAllData = async () => {
+    try {
+      const res = await api.get('/tous');
+      return res.data;
+    } catch (err) {
+      console.error('Erreur récupération toutes les données:', err);
+      throw err;
+    }
+  };
+
+  // 🔧 APPELS API UTILITAIRES
+  const getVersion = async () => {
+    try {
+      const res = await api.get('/api/version');
+      return res.data;
+    } catch (err) {
+      console.error('Erreur récupération version:', err);
+      throw err;
+    }
+  };
+
+  const getStatus = async () => {
+    try {
+      const res = await api.get('/api/status');
+      return res.data;
+    } catch (err) {
+      console.error('Erreur récupération statut:', err);
+      throw err;
+    }
+  };
+
+  const getHealth = async () => {
+    try {
+      const res = await api.get('/api/health');
+      return res.data;
+    } catch (err) {
+      console.error('Erreur récupération santé:', err);
+      throw err;
+    }
+  };
+
+  const testApi = async () => {
+    try {
+      const res = await api.get('/api/test');
+      return res.data;
+    } catch (err) {
+      console.error('Erreur test API:', err);
+      throw err;
+    }
+  };
+
+  const testMongoDB = async () => {
+    try {
+      const res = await api.get('/api/mongodb-test');
+      return res.data;
+    } catch (err) {
+      console.error('Erreur test MongoDB:', err);
+      throw err;
+    }
+  };
+
+  // 📱 APPELS API PWA
+  const getManifest = async () => {
+    try {
+      const res = await api.get('/manifest.json');
+      return res.data;
+    } catch (err) {
+      console.error('Erreur récupération manifest:', err);
+      throw err;
+    }
+  };
+
+  const getServiceWorker = async () => {
+    try {
+      const res = await api.get('/sw.js');
+      return res.data;
+    } catch (err) {
+      console.error('Erreur récupération service worker:', err);
+      throw err;
+    }
+  };
+
+  // Charger les paramètres au montage
+  useEffect(() => {
+    getSettings();
+  }, []);
 
   const value = {
     settings,
+    stats,
     loading,
-    error,
-    fetchSettings,
-    getActivePaymentMethods,
-    calculateDeliveryFees,
-    getDeliveryInfo,
-    isMaintenanceMode,
-    getMaintenanceMessage,
-    getCurrency,
-    getLanguage,
-    getShopInfo,
-    updateSettings
+    // ⚙️ Appels API Paramètres
+    getSettings,
+    updateSettings,
+    updateSettingsSection,
+    testSettings,
+    resetSettings,
+    // 📊 Appels API Statistiques
+    getStats,
+    getBasicStats,
+    getAllData,
+    // 🔧 Appels API Utilitaires
+    getVersion,
+    getStatus,
+    getHealth,
+    testApi,
+    testMongoDB,
+    // 📱 Appels API PWA
+    getManifest,
+    getServiceWorker
   };
 
   return (

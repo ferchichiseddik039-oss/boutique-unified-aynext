@@ -234,6 +234,169 @@ export const CartProvider = ({ children }) => {
     return cart.articles.length === 0;
   };
 
+  // 🛍️ APPELS API GESTION PRODUITS
+  const getAllProducts = async (params = {}) => {
+    try {
+      const res = await api.get('/api/products', { params });
+      return res.data;
+    } catch (err) {
+      console.error('Erreur récupération produits:', err);
+      throw err;
+    }
+  };
+
+  const getProductById = async (productId) => {
+    try {
+      const res = await api.get(`/api/products/${productId}`);
+      return res.data;
+    } catch (err) {
+      console.error('Erreur récupération produit:', err);
+      throw err;
+    }
+  };
+
+  const createProduct = async (productData) => {
+    try {
+      const res = await api.post('/api/products', productData);
+      return res.data;
+    } catch (err) {
+      console.error('Erreur création produit:', err);
+      throw err;
+    }
+  };
+
+  const updateProduct = async (productId, productData) => {
+    try {
+      const res = await api.put(`/api/products/${productId}`, productData);
+      return res.data;
+    } catch (err) {
+      console.error('Erreur mise à jour produit:', err);
+      throw err;
+    }
+  };
+
+  const deleteProduct = async (productId) => {
+    try {
+      const res = await api.delete(`/api/products/${productId}`);
+      return res.data;
+    } catch (err) {
+      console.error('Erreur suppression produit:', err);
+      throw err;
+    }
+  };
+
+  const getProductCustomizationOptions = async (productId) => {
+    try {
+      const res = await api.get(`/api/products/${productId}/options-personnalisation`);
+      return res.data;
+    } catch (err) {
+      console.error('Erreur options personnalisation:', err);
+      throw err;
+    }
+  };
+
+  const getProductPreview = async (productId, customData) => {
+    try {
+      const res = await api.post(`/api/products/${productId}/preview-personnalise`, customData);
+      return res.data;
+    } catch (err) {
+      console.error('Erreur aperçu personnalisé:', err);
+      throw err;
+    }
+  };
+
+  // 📦 APPELS API GESTION COMMANDES
+  const getAllOrders = async (params = {}) => {
+    try {
+      const res = await api.get('/api/orders', { params });
+      return res.data;
+    } catch (err) {
+      console.error('Erreur récupération commandes:', err);
+      throw err;
+    }
+  };
+
+  const getOrderById = async (orderId) => {
+    try {
+      const res = await api.get(`/api/orders/${orderId}`);
+      return res.data;
+    } catch (err) {
+      console.error('Erreur récupération commande:', err);
+      throw err;
+    }
+  };
+
+  const createOrder = async (orderData) => {
+    try {
+      const res = await api.post('/api/orders', orderData);
+      return res.data;
+    } catch (err) {
+      console.error('Erreur création commande:', err);
+      throw err;
+    }
+  };
+
+  const updateOrder = async (orderId, orderData) => {
+    try {
+      const res = await api.put(`/api/orders/${orderId}`, orderData);
+      return res.data;
+    } catch (err) {
+      console.error('Erreur mise à jour commande:', err);
+      throw err;
+    }
+  };
+
+  const deleteOrder = async (orderId) => {
+    try {
+      const res = await api.delete(`/api/orders/${orderId}`);
+      return res.data;
+    } catch (err) {
+      console.error('Erreur suppression commande:', err);
+      throw err;
+    }
+  };
+
+  const updateOrderStatus = async (orderId, status) => {
+    try {
+      const res = await api.put(`/api/orders/${orderId}/statut`, { statut: status });
+      return res.data;
+    } catch (err) {
+      console.error('Erreur mise à jour statut commande:', err);
+      throw err;
+    }
+  };
+
+  const createCustomHoodieOrder = async (customOrderData) => {
+    try {
+      const res = await api.post('/api/orders/custom-hoodie', customOrderData);
+      return res.data;
+    } catch (err) {
+      console.error('Erreur création commande hoodie personnalisé:', err);
+      throw err;
+    }
+  };
+
+  const getAdminOrders = async (params = {}) => {
+    try {
+      const res = await api.get('/orders/admin/toutes', { params });
+      return res.data;
+    } catch (err) {
+      console.error('Erreur récupération commandes admin:', err);
+      throw err;
+    }
+  };
+
+  // 🖼️ APPELS API GESTION IMAGES
+  const uploadProductImages = async (productId, images) => {
+    try {
+      const res = await api.post('/upload/product-images', { productId, images });
+      return res.data;
+    } catch (err) {
+      console.error('Erreur upload images:', err);
+      throw err;
+    }
+  };
+
   const value = {
     cart,
     loading,
@@ -246,7 +409,26 @@ export const CartProvider = ({ children }) => {
     getTotal,
     getItemCount,
     isEmpty,
-    loadCart
+    loadCart,
+    // 🛍️ Appels API Gestion Produits
+    getAllProducts,
+    getProductById,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    getProductCustomizationOptions,
+    getProductPreview,
+    // 📦 Appels API Gestion Commandes
+    getAllOrders,
+    getOrderById,
+    createOrder,
+    updateOrder,
+    deleteOrder,
+    updateOrderStatus,
+    createCustomHoodieOrder,
+    getAdminOrders,
+    // 🖼️ Appels API Gestion Images
+    uploadProductImages
   };
 
   return (
