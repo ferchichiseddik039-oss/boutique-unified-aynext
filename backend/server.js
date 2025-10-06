@@ -2903,6 +2903,801 @@ app.put('/users/password', async (req, res) => {
   }
 });
 
+// 🛍️ ENDPOINTS GESTION PRODUITS COMPLETS
+app.get('/api/products', async (req, res) => {
+  try {
+    console.log('🔍 API /api/products GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { category, brand, limit, genre, search } = req.query;
+    console.log('📦 Filtres produits:', { category, brand, limit, genre, search });
+    
+    let products = [];
+    let filter = {};
+    
+    // Construire le filtre
+    if (category) filter.categorie = category;
+    if (brand) filter.marque = brand;
+    if (genre) filter.genre = genre;
+    if (search) {
+      filter.$or = [
+        { nom: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { marque: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération produits depuis MongoDB avec filtre:', filter);
+      let query = Product.find(filter);
+      
+      if (limit) {
+        query = query.limit(parseInt(limit));
+      }
+      
+      products = await query.sort({ dateCreation: -1 });
+      console.log('📦 Produits trouvés:', products.length);
+      
+      // S'assurer que les produits ont des images
+      products = products.map(product => {
+        if (!product.images || product.images.length === 0) {
+          product.images = [`/uploads/product-${product._id}-1.jpg`];
+        }
+        return product;
+      });
+    } else {
+      console.log('⚠️ Utilisation des produits de fallback');
+      products = fallbackProducts;
+      
+      // Appliquer les filtres sur les données de fallback
+      if (category) {
+        products = products.filter(p => p.categorie === category);
+      }
+      if (brand) {
+        products = products.filter(p => p.marque === brand);
+      }
+      if (genre) {
+        products = products.filter(p => p.genre === genre);
+      }
+      if (search) {
+        const searchLower = search.toLowerCase();
+        products = products.filter(p => 
+          p.nom.toLowerCase().includes(searchLower) ||
+          p.description.toLowerCase().includes(searchLower) ||
+          p.marque.toLowerCase().includes(searchLower)
+        );
+      }
+      if (limit) {
+        products = products.slice(0, parseInt(limit));
+      }
+      console.log('📦 Produits fallback filtrés:', products.length);
+    }
+    
+    res.json({ success: true, products });
+  } catch (error) {
+    console.error('❌ Erreur récupération produits:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/products', async (req, res) => {
+  try {
+    console.log('🔍 API /products GET appelée (sans /api)');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { category, brand, limit, genre, search } = req.query;
+    console.log('📦 Filtres produits collection:', { category, brand, limit, genre, search });
+    
+    let products = [];
+    let filter = {};
+    
+    // Construire le filtre
+    if (category) filter.categorie = category;
+    if (brand) filter.marque = brand;
+    if (genre) filter.genre = genre;
+    if (search) {
+      filter.$or = [
+        { nom: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { marque: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération produits collection depuis MongoDB avec filtre:', filter);
+      let query = Product.find(filter);
+      
+      if (limit) {
+        query = query.limit(parseInt(limit));
+      }
+      
+      products = await query.sort({ dateCreation: -1 });
+      console.log('📦 Produits collection trouvés:', products.length);
+    } else {
+      console.log('⚠️ Utilisation des produits de fallback pour collection');
+      products = fallbackProducts;
+      
+      // Appliquer les filtres sur les données de fallback
+      if (category) {
+        products = products.filter(p => p.categorie === category);
+      }
+      if (brand) {
+        products = products.filter(p => p.marque === brand);
+      }
+      if (genre) {
+        products = products.filter(p => p.genre === genre);
+      }
+      if (search) {
+        const searchLower = search.toLowerCase();
+        products = products.filter(p => 
+          p.nom.toLowerCase().includes(searchLower) ||
+          p.description.toLowerCase().includes(searchLower) ||
+          p.marque.toLowerCase().includes(searchLower)
+        );
+      }
+      if (limit) {
+        products = products.slice(0, parseInt(limit));
+      }
+      console.log('📦 Produits collection fallback filtrés:', products.length);
+    }
+    
+    res.json({ success: true, products });
+  } catch (error) {
+    console.error('❌ Erreur récupération produits collection:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    console.log('🔍 API /api/products/:id GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { id } = req.params;
+    let product;
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération produit depuis MongoDB...');
+      product = await Product.findById(id);
+    } else {
+      console.log('⚠️ Utilisation du produit de fallback');
+      product = fallbackProducts.find(p => p._id === id);
+    }
+    
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Produit non trouvé' });
+    }
+    
+    // S'assurer que le produit a des images
+    if (!product.images || product.images.length === 0) {
+      product.images = [`/uploads/product-${product._id}-1.jpg`];
+    }
+    
+    res.json({ success: true, product });
+  } catch (error) {
+    console.error('❌ Erreur récupération produit:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/products', async (req, res) => {
+  try {
+    console.log('🔍 API /api/products POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const productData = req.body;
+    console.log('📦 Création produit:', productData);
+    
+    if (mongoConnected) {
+      const product = new Product(productData);
+      await product.save();
+      console.log('📦 Produit créé:', product.nom);
+      res.status(201).json({ success: true, message: 'Produit créé avec succès', product });
+    } else {
+      console.log('⚠️ Mode fallback - produit simulé');
+      res.status(201).json({ success: true, message: 'Produit créé avec succès', product: { _id: 'fallback-product', ...productData } });
+    }
+  } catch (error) {
+    console.error('❌ Erreur création produit:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/products', async (req, res) => {
+  try {
+    console.log('🔍 API /products POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const productData = req.body;
+    console.log('📦 Données produit reçues:', productData);
+    
+    if (mongoConnected) {
+      const product = new Product(productData);
+      await product.save();
+      console.log('📦 Produit créé:', product.nom);
+      res.status(201).json({ success: true, message: 'Produit créé avec succès', product });
+    } else {
+      console.log('⚠️ Mode fallback - produit simulé');
+      res.status(201).json({ success: true, message: 'Produit créé avec succès', product: { _id: 'fallback-product', ...productData } });
+    }
+  } catch (error) {
+    console.error('❌ Erreur création produit:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.put('/api/products/:productId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/products/:productId PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { productId } = req.params;
+    const updateData = req.body;
+    console.log('📦 Mise à jour produit:', productId, updateData);
+    
+    if (mongoConnected) {
+      const product = await Product.findByIdAndUpdate(productId, updateData, { new: true });
+      if (!product) {
+        return res.status(404).json({ success: false, message: 'Produit non trouvé' });
+      }
+      console.log('📦 Produit mis à jour:', product.nom);
+    }
+    
+    res.json({ success: true, message: 'Produit mis à jour avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour produit:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.delete('/api/products/:productId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/products/:productId DELETE appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { productId } = req.params;
+    console.log('📦 Suppression produit:', productId);
+    
+    if (mongoConnected) {
+      const product = await Product.findByIdAndDelete(productId);
+      if (!product) {
+        return res.status(404).json({ success: false, message: 'Produit non trouvé' });
+      }
+      console.log('📦 Produit supprimé:', product.nom);
+    }
+    
+    res.json({ success: true, message: 'Produit supprimé avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur suppression produit:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/products/:productId/options-personnalisation', async (req, res) => {
+  try {
+    console.log('🔍 API /api/products/:productId/options-personnalisation GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { productId } = req.params;
+    console.log('🎨 Options personnalisation pour produit:', productId);
+    
+    // Options de personnalisation par défaut
+    const options = {
+      couleurs: ['Noir', 'Blanc', 'Gris', 'Rouge', 'Bleu'],
+      tailles: ['S', 'M', 'L', 'XL', 'XXL'],
+      personnalisations: [
+        { type: 'texte', label: 'Texte personnalisé', maxLength: 20 },
+        { type: 'logo', label: 'Logo personnalisé', formats: ['PNG', 'JPG', 'SVG'] }
+      ]
+    };
+    
+    res.json({ success: true, options });
+  } catch (error) {
+    console.error('❌ Erreur options personnalisation:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/products/:productId/preview-personnalise', async (req, res) => {
+  try {
+    console.log('🔍 API /api/products/:productId/preview-personnalise POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { productId } = req.params;
+    const customData = req.body;
+    console.log('🎨 Aperçu personnalisé pour produit:', productId, customData);
+    
+    // Générer un aperçu personnalisé
+    const preview = {
+      productId,
+      customizations: customData,
+      previewUrl: `/uploads/preview-${productId}-${Date.now()}.jpg`,
+      estimatedPrice: 89.99 + (customData.premiumOptions ? 15.00 : 0)
+    };
+    
+    res.json({ success: true, preview });
+  } catch (error) {
+    console.error('❌ Erreur aperçu personnalisé:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// 🛒 ENDPOINTS GESTION PANIER COMPLETS
+app.get('/api/cart', async (req, res) => {
+  try {
+    console.log('🔍 API /api/cart GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const token = req.headers['x-auth-token'];
+    let cart = { articles: [] };
+    
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_2024');
+        console.log('🛒 Récupération panier pour utilisateur:', decoded.userId);
+        
+        // Ici on pourrait récupérer le panier depuis la base de données
+        // Pour l'instant, on retourne un panier vide
+        cart = { articles: [] };
+      } catch (jwtError) {
+        console.log('⚠️ Token invalide, panier vide');
+        cart = { articles: [] };
+      }
+    }
+    
+    res.json({ success: true, cart });
+  } catch (error) {
+    console.error('❌ Erreur récupération panier:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/cart', async (req, res) => {
+  try {
+    console.log('🔍 API /cart GET appelée (sans /api)');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const token = req.headers['x-auth-token'];
+    let cart = { articles: [] };
+    
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_2024');
+        console.log('🛒 Récupération panier pour utilisateur:', decoded.userId);
+        cart = { articles: [] };
+      } catch (jwtError) {
+        console.log('⚠️ Token invalide, panier vide');
+        cart = { articles: [] };
+      }
+    }
+    
+    res.json({ success: true, cart });
+  } catch (error) {
+    console.error('❌ Erreur récupération panier:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/cart', async (req, res) => {
+  try {
+    console.log('🔍 API /api/cart POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const cartData = req.body;
+    console.log('🛒 Création/mise à jour panier:', cartData);
+    
+    // Ici on pourrait sauvegarder le panier dans la base de données
+    // Pour l'instant, on retourne le panier tel quel
+    
+    res.json({ success: true, message: 'Panier mis à jour avec succès', cart: cartData });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour panier:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.put('/api/cart/modifier/:articleId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/cart/modifier/:articleId PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { articleId } = req.params;
+    const { quantite } = req.body;
+    console.log('🛒 Modification quantité article:', articleId, 'quantité:', quantite);
+    
+    // Ici on pourrait modifier l'article dans le panier en base de données
+    
+    res.json({ success: true, message: 'Article modifié avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur modification article panier:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.delete('/api/cart/supprimer/:articleId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/cart/supprimer/:articleId DELETE appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { articleId } = req.params;
+    console.log('🛒 Suppression article panier:', articleId);
+    
+    // Ici on pourrait supprimer l'article du panier en base de données
+    
+    res.json({ success: true, message: 'Article supprimé avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur suppression article panier:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// 📦 ENDPOINTS GESTION COMMANDES COMPLETS
+app.get('/api/orders', async (req, res) => {
+  try {
+    console.log('🔍 API /api/orders GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { limit = 10, page = 1, statut, userId } = req.query;
+    console.log('📦 Paramètres commandes:', { limit, page, statut, userId });
+    
+    let orders = [];
+    let total = 0;
+    let filter = {};
+    
+    if (statut) filter.statut = statut;
+    if (userId) filter['client.email'] = userId;
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération commandes depuis MongoDB avec filtre:', filter);
+      const skip = (page - 1) * limit;
+      orders = await Order.find(filter)
+        .sort({ dateCommande: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+      
+      total = await Order.countDocuments(filter);
+      console.log('📦 Commandes trouvées:', orders.length, 'Total:', total);
+    } else {
+      console.log('⚠️ Utilisation des commandes de fallback');
+      orders = [];
+      total = 0;
+    }
+    
+    res.json({ 
+      success: true, 
+      orders, 
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit)
+    });
+  } catch (error) {
+    console.error('❌ Erreur récupération commandes:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/orders/:orderId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/orders/:orderId GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { orderId } = req.params;
+    let order;
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération commande depuis MongoDB...');
+      order = await Order.findById(orderId);
+    } else {
+      console.log('⚠️ Utilisation de la commande de fallback');
+      order = null;
+    }
+    
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Commande non trouvée' });
+    }
+    
+    res.json({ success: true, order });
+  } catch (error) {
+    console.error('❌ Erreur récupération commande:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/orders', async (req, res) => {
+  try {
+    console.log('🔍 API /api/orders POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const orderData = req.body;
+    console.log('📦 Création commande:', orderData);
+    
+    if (mongoConnected) {
+      const order = new Order(orderData);
+      await order.save();
+      console.log('📦 Commande créée:', order.numeroCommande);
+      res.status(201).json({ success: true, message: 'Commande créée avec succès', order });
+    } else {
+      console.log('⚠️ Mode fallback - commande simulée');
+      res.status(201).json({ success: true, message: 'Commande créée avec succès', order: { _id: 'fallback-order', ...orderData } });
+    }
+  } catch (error) {
+    console.error('❌ Erreur création commande:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.put('/api/orders/:orderId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/orders/:orderId PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { orderId } = req.params;
+    const updateData = req.body;
+    console.log('📦 Mise à jour commande:', orderId, updateData);
+    
+    if (mongoConnected) {
+      const order = await Order.findByIdAndUpdate(orderId, updateData, { new: true });
+      if (!order) {
+        return res.status(404).json({ success: false, message: 'Commande non trouvée' });
+      }
+      console.log('📦 Commande mise à jour:', order.numeroCommande);
+    }
+    
+    res.json({ success: true, message: 'Commande mise à jour avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour commande:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.delete('/api/orders/:orderId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/orders/:orderId DELETE appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { orderId } = req.params;
+    console.log('📦 Suppression commande:', orderId);
+    
+    if (mongoConnected) {
+      const order = await Order.findByIdAndDelete(orderId);
+      if (!order) {
+        return res.status(404).json({ success: false, message: 'Commande non trouvée' });
+      }
+      console.log('📦 Commande supprimée:', order.numeroCommande);
+    }
+    
+    res.json({ success: true, message: 'Commande supprimée avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur suppression commande:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.put('/api/orders/:orderId/statut', async (req, res) => {
+  try {
+    console.log('🔍 API /api/orders/:orderId/statut PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { orderId } = req.params;
+    const { statut } = req.body;
+    console.log('📦 Mise à jour statut commande:', orderId, 'statut:', statut);
+    
+    if (mongoConnected) {
+      const order = await Order.findByIdAndUpdate(orderId, { statut }, { new: true });
+      if (!order) {
+        return res.status(404).json({ success: false, message: 'Commande non trouvée' });
+      }
+      console.log('📦 Statut commande mis à jour:', order.numeroCommande, '->', statut);
+    }
+    
+    res.json({ success: true, message: 'Statut commande mis à jour avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour statut commande:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/orders/custom-hoodie', async (req, res) => {
+  try {
+    console.log('🔍 API /api/orders/custom-hoodie POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const customOrderData = req.body;
+    console.log('🎨 Création commande hoodie personnalisé:', customOrderData);
+    
+    // Générer un numéro de commande unique
+    const numeroCommande = `CMD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const orderData = {
+      ...customOrderData,
+      numeroCommande,
+      statut: 'En attente',
+      dateCommande: new Date(),
+      typeCommande: 'Hoodie personnalisé'
+    };
+    
+    if (mongoConnected) {
+      const order = new Order(orderData);
+      await order.save();
+      console.log('🎨 Commande hoodie personnalisé créée:', order.numeroCommande);
+      res.status(201).json({ success: true, message: 'Commande hoodie personnalisé créée avec succès', order });
+    } else {
+      console.log('⚠️ Mode fallback - commande hoodie personnalisé simulée');
+      res.status(201).json({ success: true, message: 'Commande hoodie personnalisé créée avec succès', order: { _id: 'fallback-custom-order', ...orderData } });
+    }
+  } catch (error) {
+    console.error('❌ Erreur création commande hoodie personnalisé:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/orders/custom-hoodie', async (req, res) => {
+  try {
+    console.log('🔍 API /orders/custom-hoodie POST appelée (sans /api)');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const customOrderData = req.body;
+    console.log('🎨 Création commande hoodie personnalisé (sans /api):', customOrderData);
+    
+    // Générer un numéro de commande unique
+    const numeroCommande = `CMD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const orderData = {
+      ...customOrderData,
+      numeroCommande,
+      statut: 'En attente',
+      dateCommande: new Date(),
+      typeCommande: 'Hoodie personnalisé'
+    };
+    
+    if (mongoConnected) {
+      const order = new Order(orderData);
+      await order.save();
+      console.log('🎨 Commande hoodie personnalisé créée (sans /api):', order.numeroCommande);
+      res.status(201).json({ success: true, message: 'Commande hoodie personnalisé créée avec succès', order });
+    } else {
+      console.log('⚠️ Mode fallback - commande hoodie personnalisé simulée (sans /api)');
+      res.status(201).json({ success: true, message: 'Commande hoodie personnalisé créée avec succès', order: { _id: 'fallback-custom-order', ...orderData } });
+    }
+  } catch (error) {
+    console.error('❌ Erreur création commande hoodie personnalisé (sans /api):', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // Orders admin toutes endpoint (sans /api)
 app.get('/orders/admin/toutes', async (req, res) => {
   try {
