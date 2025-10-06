@@ -415,7 +415,7 @@ app.get('/api/orders', async (req, res) => {
   }
 });
 
-// Stats endpoint (pour le dashboard admin)
+// Stats endpoint (pour le dashboard admin) - Version courte
 app.get('/api/stats', async (req, res) => {
   try {
     console.log('🔍 API /api/stats appelée');
@@ -450,6 +450,74 @@ app.get('/api/stats', async (req, res) => {
     res.json({ success: true, stats });
   } catch (error) {
     console.error('❌ Erreur récupération statistiques:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Stats endpoint (version courte pour le frontend)
+app.get('/stats', async (req, res) => {
+  try {
+    console.log('🔍 API /stats appelée (version courte)');
+    console.log('📊 mongoConnected:', mongoConnected);
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    let stats = {
+      totalUsers: 0,
+      totalProducts: 0,
+      totalOrders: 0,
+      totalRevenue: 0
+    };
+    
+    if (mongoConnected) {
+      console.log('🗄️ Calcul des statistiques depuis MongoDB...');
+      stats.totalUsers = await User.countDocuments();
+      stats.totalProducts = await Product.countDocuments();
+      console.log('📊 Stats calculées:', stats);
+    } else {
+      console.log('⚠️ Utilisation des stats de fallback');
+      stats.totalUsers = 1;
+      stats.totalProducts = fallbackProducts.length;
+    }
+    
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('❌ Erreur récupération statistiques:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Products endpoint (version courte pour le frontend)
+app.get('/tous', async (req, res) => {
+  try {
+    console.log('🔍 API /tous appelée (version courte)');
+    console.log('📊 mongoConnected:', mongoConnected);
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    let products;
+    if (mongoConnected) {
+      console.log('🗄️ Récupération depuis MongoDB...');
+      products = await Product.find();
+      console.log('📦 Produits trouvés:', products.length);
+    } else {
+      console.log('⚠️ Utilisation des données de fallback');
+      products = fallbackProducts;
+      console.log('📦 Produits fallback:', products.length);
+    }
+    res.json({ success: true, products });
+  } catch (error) {
+    console.error('❌ Erreur récupération produits:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
