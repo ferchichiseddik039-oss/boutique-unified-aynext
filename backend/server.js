@@ -55,13 +55,6 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ================================
-// ✅ Route test CORS
-// ================================
-app.get("/", (req, res) => {
-  res.json({ message: "✅ Backend Render prêt et CORS actif" });
-});
-
 // Serve static files from the React build folder
 app.use(express.static(path.join(__dirname, '../frontend/build')));
 
@@ -163,6 +156,11 @@ app.get('/api/health', (req, res) => {
     environment: process.env.NODE_ENV || 'development',
     mongodb: mongoConnected ? 'connected' : 'fallback_mode'
   });
+});
+
+// API test route
+app.get('/api/test', (req, res) => {
+  res.json({ message: "✅ Backend Render prêt et CORS actif" });
 });
 
 // Admin check endpoint
