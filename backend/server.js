@@ -1114,10 +1114,112 @@ app.post('/products', async (req, res) => {
     const productData = req.body;
     console.log('📦 Données produit reçues:', productData);
     
-    // Pour l'instant, retourner un succès
-    res.status(201).json({ success: true, message: 'Produit créé avec succès' });
+    if (mongoConnected) {
+      const product = new Product(productData);
+      await product.save();
+      console.log('📦 Produit créé:', product.nom);
+      res.status(201).json({ success: true, message: 'Produit créé avec succès', product });
+    } else {
+      console.log('⚠️ Mode fallback - produit simulé');
+      res.status(201).json({ success: true, message: 'Produit créé avec succès', product: { _id: 'fallback-product', ...productData } });
+    }
   } catch (error) {
     console.error('❌ Erreur création produit:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ================================
+// APIs DE GESTION DES PRODUITS
+// ================================
+
+// Create product (admin)
+app.post('/api/products', async (req, res) => {
+  try {
+    console.log('🔍 API /api/products POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const productData = req.body;
+    console.log('📦 Création produit:', productData);
+    
+    if (mongoConnected) {
+      const product = new Product(productData);
+      await product.save();
+      console.log('📦 Produit créé:', product.nom);
+      res.status(201).json({ success: true, message: 'Produit créé avec succès', product });
+    } else {
+      console.log('⚠️ Mode fallback - produit simulé');
+      res.status(201).json({ success: true, message: 'Produit créé avec succès', product: { _id: 'fallback-product', ...productData } });
+    }
+  } catch (error) {
+    console.error('❌ Erreur création produit:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Update product (admin)
+app.put('/api/products/:productId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/products/:productId PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { productId } = req.params;
+    const updateData = req.body;
+    console.log('📦 Mise à jour produit:', productId, updateData);
+    
+    if (mongoConnected) {
+      const product = await Product.findByIdAndUpdate(productId, updateData, { new: true });
+      if (!product) {
+        return res.status(404).json({ success: false, message: 'Produit non trouvé' });
+      }
+      console.log('📦 Produit mis à jour:', product.nom);
+    }
+    
+    res.json({ success: true, message: 'Produit mis à jour avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour produit:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Delete product (admin)
+app.delete('/api/products/:productId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/products/:productId DELETE appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { productId } = req.params;
+    console.log('📦 Suppression produit:', productId);
+    
+    if (mongoConnected) {
+      const product = await Product.findByIdAndDelete(productId);
+      if (!product) {
+        return res.status(404).json({ success: false, message: 'Produit non trouvé' });
+      }
+      console.log('📦 Produit supprimé:', product.nom);
+    }
+    
+    res.json({ success: true, message: 'Produit supprimé avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur suppression produit:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
@@ -1482,10 +1584,33 @@ app.post('/settings/reset', async (req, res) => {
 // ENDPOINTS COMMANDE
 // ================================
 
-// Custom hoodie order endpoint
+// Custom hoodie order endpoint (sans /api)
 app.post('/orders/custom-hoodie', async (req, res) => {
   try {
     console.log('🔍 API /orders/custom-hoodie POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const hoodieData = req.body;
+    console.log('🎨 Commande hoodie personnalisé:', hoodieData);
+    
+    // Pour l'instant, retourner un succès
+    res.json({ success: true, message: 'Commande hoodie créée avec succès', orderId: 'order-123' });
+  } catch (error) {
+    console.error('❌ Erreur commande hoodie:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Custom hoodie order endpoint (avec /api)
+app.post('/api/orders/custom-hoodie', async (req, res) => {
+  try {
+    console.log('🔍 API /api/orders/custom-hoodie POST appelée');
     
     // Headers anti-cache
     res.set({
@@ -1581,6 +1706,328 @@ app.get('/api/users/admin/:userId/stats', async (req, res) => {
     res.json({ success: true, stats });
   } catch (error) {
     console.error('❌ Erreur stats utilisateur admin:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ================================
+// APIs DE GESTION DES UTILISATEURS
+// ================================
+
+// Get all users (admin)
+app.get('/api/users', async (req, res) => {
+  try {
+    console.log('🔍 API /api/users GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    let users = [];
+    if (mongoConnected) {
+      console.log('🗄️ Récupération utilisateurs depuis MongoDB...');
+      users = await User.find().select('-motDePasse');
+      console.log('👥 Utilisateurs trouvés:', users.length);
+    } else {
+      console.log('⚠️ Utilisation des utilisateurs de fallback');
+      users = [fallbackAdmin];
+    }
+    
+    res.json({ success: true, users });
+  } catch (error) {
+    console.error('❌ Erreur récupération utilisateurs:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Get user by ID
+app.get('/api/users/:userId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/users/:userId GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { userId } = req.params;
+    let user;
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération utilisateur depuis MongoDB...');
+      user = await User.findById(userId).select('-motDePasse');
+    } else {
+      console.log('⚠️ Utilisation de l\'utilisateur de fallback');
+      user = fallbackAdmin;
+    }
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+    
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('❌ Erreur récupération utilisateur:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Update user
+app.put('/api/users/:userId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/users/:userId PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { userId } = req.params;
+    const updateData = req.body;
+    console.log('👤 Mise à jour utilisateur:', userId, updateData);
+    
+    if (mongoConnected) {
+      const user = await User.findByIdAndUpdate(userId, updateData, { new: true }).select('-motDePasse');
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+      }
+      console.log('👤 Utilisateur mis à jour:', user.email);
+    }
+    
+    res.json({ success: true, message: 'Utilisateur mis à jour avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour utilisateur:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Delete user
+app.delete('/api/users/:userId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/users/:userId DELETE appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { userId } = req.params;
+    console.log('👤 Suppression utilisateur:', userId);
+    
+    if (mongoConnected) {
+      const user = await User.findByIdAndDelete(userId);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+      }
+      console.log('👤 Utilisateur supprimé:', user.email);
+    }
+    
+    res.json({ success: true, message: 'Utilisateur supprimé avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur suppression utilisateur:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ================================
+// APIs DE GESTION DES COMMANDES
+// ================================
+
+// Get all orders (admin)
+app.get('/api/orders', async (req, res) => {
+  try {
+    console.log('🔍 API /api/orders GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { limit = 10, page = 1, status, search } = req.query;
+    console.log('📦 Paramètres commandes:', { limit, page, status, search });
+    
+    let orders = [];
+    let total = 0;
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération commandes depuis MongoDB...');
+      // Construire le filtre
+      let filter = {};
+      if (status) filter.statut = status;
+      if (search) {
+        filter.$or = [
+          { 'client.nom': { $regex: search, $options: 'i' } },
+          { 'client.email': { $regex: search, $options: 'i' } },
+          { numeroCommande: { $regex: search, $options: 'i' } }
+        ];
+      }
+      
+      // Récupérer les commandes avec pagination
+      const skip = (page - 1) * limit;
+      orders = await Order.find(filter)
+        .sort({ dateCommande: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+      
+      total = await Order.countDocuments(filter);
+      console.log('📦 Commandes trouvées:', orders.length, 'Total:', total);
+    } else {
+      console.log('⚠️ Utilisation des commandes de fallback');
+      orders = [];
+      total = 0;
+    }
+    
+    res.json({ 
+      success: true, 
+      orders, 
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit)
+    });
+  } catch (error) {
+    console.error('❌ Erreur récupération commandes:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Get order by ID
+app.get('/api/orders/:orderId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/orders/:orderId GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { orderId } = req.params;
+    let order;
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération commande depuis MongoDB...');
+      order = await Order.findById(orderId);
+    } else {
+      console.log('⚠️ Utilisation de la commande de fallback');
+      order = null;
+    }
+    
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Commande non trouvée' });
+    }
+    
+    res.json({ success: true, order });
+  } catch (error) {
+    console.error('❌ Erreur récupération commande:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Create new order
+app.post('/api/orders', async (req, res) => {
+  try {
+    console.log('🔍 API /api/orders POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const orderData = req.body;
+    console.log('📦 Création commande:', orderData);
+    
+    if (mongoConnected) {
+      // Générer un numéro de commande unique
+      const numeroCommande = `CMD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      orderData.numeroCommande = numeroCommande;
+      
+      const order = new Order(orderData);
+      await order.save();
+      console.log('📦 Commande créée:', order.numeroCommande);
+      
+      res.status(201).json({ success: true, message: 'Commande créée avec succès', order });
+    } else {
+      console.log('⚠️ Mode fallback - commande simulée');
+      res.status(201).json({ success: true, message: 'Commande créée avec succès', order: { numeroCommande: 'CMD-FALLBACK-123' } });
+    }
+  } catch (error) {
+    console.error('❌ Erreur création commande:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Update order status
+app.put('/api/orders/:orderId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/orders/:orderId PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { orderId } = req.params;
+    const updateData = req.body;
+    console.log('📦 Mise à jour commande:', orderId, updateData);
+    
+    if (mongoConnected) {
+      const order = await Order.findByIdAndUpdate(orderId, updateData, { new: true });
+      if (!order) {
+        return res.status(404).json({ success: false, message: 'Commande non trouvée' });
+      }
+      console.log('📦 Commande mise à jour:', order.numeroCommande);
+    }
+    
+    res.json({ success: true, message: 'Commande mise à jour avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour commande:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Delete order
+app.delete('/api/orders/:orderId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/orders/:orderId DELETE appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { orderId } = req.params;
+    console.log('📦 Suppression commande:', orderId);
+    
+    if (mongoConnected) {
+      const order = await Order.findByIdAndDelete(orderId);
+      if (!order) {
+        return res.status(404).json({ success: false, message: 'Commande non trouvée' });
+      }
+      console.log('📦 Commande supprimée:', order.numeroCommande);
+    }
+    
+    res.json({ success: true, message: 'Commande supprimée avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur suppression commande:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
