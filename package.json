@@ -5,7 +5,7 @@
   "main": "backend/server.js",
   "scripts": {
     "install": "cd backend && npm install && cd ../frontend && npm install",
-    "build": "cd frontend && npm run build:linux && cd .. && rm -rf build && mkdir build && cp -r frontend/build/* build/",
+    "build": "rm -rf node_modules frontend/node_modules && npm install && cd frontend && npm install && npm run build:linux && cd .. && rm -rf build && mkdir build && cp -r frontend/build/* build/",
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
     "test": "echo \"No tests specified\" && exit 0"
