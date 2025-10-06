@@ -11,20 +11,23 @@ const PORT = process.env.PORT || 5001;
 
 let mongoConnected = false;
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => {
-  console.log('Connecté à MongoDB Atlas');
-  mongoConnected = true;
-})
-.catch(err => {
-  console.error('Erreur de connexion à MongoDB Atlas:', err);
-  console.warn('Démarrage en mode fallback (données statiques)');
-  mongoConnected = false;
-});
+// MongoDB Connection - Attendre la connexion avant de démarrer le serveur
+async function connectToDatabase() {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log('✅ Connecté à MongoDB Atlas');
+    mongoConnected = true;
+    return true;
+  } catch (err) {
+    console.error('❌ Erreur de connexion à MongoDB Atlas:', err);
+    console.warn('⚠️ Démarrage en mode fallback (données statiques)');
+    mongoConnected = false;
+    return false;
+  }
+}
 
 // ================================
 // ✅ CORS configuration (Render + Local)
@@ -400,9 +403,22 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Serveur unifié démarré sur le port ${PORT}`);
-  console.log(`📱 Frontend accessible sur: http://localhost:${PORT}`);
-  console.log(`🔧 API accessible sur: http://localhost:${PORT}/api`);
+// Start server - Attendre la connexion MongoDB
+async function startServer() {
+  console.log('🔄 Tentative de connexion à MongoDB Atlas...');
+  
+  const dbConnected = await connectToDatabase();
+  
+  app.listen(PORT, () => {
+    console.log(`🚀 Serveur unifié démarré sur le port ${PORT}`);
+    console.log(`📱 Frontend accessible sur: http://localhost:${PORT}`);
+    console.log(`🔧 API accessible sur: http://localhost:${PORT}/api`);
+    console.log(`🗄️ Base de données: ${dbConnected ? 'MongoDB Atlas connecté' : 'Mode fallback (données statiques)'}`);
+  });
+}
+
+// Démarrer l'application
+startServer().catch(err => {
+  console.error('❌ Erreur lors du démarrage:', err);
+  process.exit(1);
 });
