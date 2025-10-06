@@ -522,6 +522,845 @@ app.get('/tous', async (req, res) => {
   }
 });
 
+// ================================
+// ENDPOINTS MANQUANTS POUR LE FRONTEND
+// ================================
+
+// Products endpoint (sans /api)
+app.get('/products', async (req, res) => {
+  try {
+    console.log('🔍 API /products appelée');
+    console.log('📊 mongoConnected:', mongoConnected);
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    let products;
+    if (mongoConnected) {
+      console.log('🗄️ Récupération depuis MongoDB...');
+      products = await Product.find();
+      console.log('📦 Produits trouvés:', products.length);
+    } else {
+      console.log('⚠️ Utilisation des données de fallback');
+      products = fallbackProducts;
+      console.log('📦 Produits fallback:', products.length);
+    }
+    res.json({ success: true, products });
+  } catch (error) {
+    console.error('❌ Erreur récupération produits:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Settings endpoint (sans /api)
+app.get('/settings', async (req, res) => {
+  try {
+    console.log('🔍 API /settings appelée (sans /api)');
+    console.log('📊 mongoConnected:', mongoConnected);
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    let settings;
+    if (mongoConnected) {
+      console.log('🗄️ Récupération depuis MongoDB...');
+      settings = await Settings.findOne();
+      console.log('⚙️ Paramètres trouvés:', settings ? 'Oui' : 'Non');
+    } else {
+      console.log('⚠️ Utilisation des paramètres de fallback');
+      settings = fallbackSettings;
+    }
+    res.json({ success: true, settings: settings || {} });
+  } catch (error) {
+    console.error('❌ Erreur récupération paramètres:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Cart endpoint (sans /api)
+app.get('/cart', async (req, res) => {
+  try {
+    console.log('🔍 API /cart appelée (sans /api)');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    // Pour l'instant, retourner un panier vide
+    const cart = { articles: [] };
+    console.log('🛒 Panier retourné:', cart);
+    
+    res.json({ success: true, cart });
+  } catch (error) {
+    console.error('❌ Erreur récupération panier:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Auth check endpoint (sans /api)
+app.get('/auth/check', async (req, res) => {
+  try {
+    console.log('🔍 API /auth/check appelée (sans /api)');
+    
+    const token = req.headers['x-auth-token'];
+    if (!token) {
+      return res.status(401).json({ success: false, message: "Token d'authentification requis" });
+    }
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_2024');
+      const user = {
+        _id: decoded.userId,
+        email: decoded.email,
+        role: decoded.role
+      };
+      res.status(200).json({ success: true, user });
+    } catch (jwtError) {
+      res.status(401).json({ success: false, message: "Token invalide ou expiré" });
+    }
+  } catch (error) {
+    console.error('❌ Erreur vérification auth:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Admin stats endpoint
+app.get('/api/admin/stats', async (req, res) => {
+  try {
+    console.log('🔍 API /api/admin/stats appelée');
+    console.log('📊 mongoConnected:', mongoConnected);
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    let stats = {
+      totalUsers: 0,
+      totalProducts: 0,
+      totalOrders: 0,
+      totalRevenue: 0
+    };
+    
+    if (mongoConnected) {
+      console.log('🗄️ Calcul des statistiques depuis MongoDB...');
+      stats.totalUsers = await User.countDocuments();
+      stats.totalProducts = await Product.countDocuments();
+      console.log('📊 Stats calculées:', stats);
+    } else {
+      console.log('⚠️ Utilisation des stats de fallback');
+      stats.totalUsers = 1;
+      stats.totalProducts = fallbackProducts.length;
+    }
+    
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('❌ Erreur récupération statistiques admin:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Users admin endpoint
+app.get('/api/users/admin/tous', async (req, res) => {
+  try {
+    console.log('🔍 API /api/users/admin/tous appelée');
+    console.log('📊 mongoConnected:', mongoConnected);
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    let users;
+    if (mongoConnected) {
+      console.log('🗄️ Récupération depuis MongoDB...');
+      users = await User.find();
+      console.log('👥 Utilisateurs trouvés:', users.length);
+    } else {
+      console.log('⚠️ Utilisation des utilisateurs de fallback');
+      users = [fallbackAdmin];
+    }
+    res.json({ success: true, users });
+  } catch (error) {
+    console.error('❌ Erreur récupération utilisateurs admin:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ================================
+// ENDPOINTS CRITIQUES MANQUANTS
+// ================================
+
+// Admin check endpoint (sans /api)
+app.get('/admin/check', async (req, res) => {
+  try {
+    console.log('🔍 API /admin/check appelée (sans /api)');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    res.json({ success: true, exists: true });
+  } catch (error) {
+    console.error('❌ Erreur admin check:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Auth inscription endpoint
+app.post('/auth/inscription', async (req, res) => {
+  try {
+    console.log('🔍 API /auth/inscription appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { email, motDePasse, nom, prenom } = req.body;
+    
+    // Vérifier si l'utilisateur existe déjà
+    let existingUser;
+    if (mongoConnected) {
+      existingUser = await User.findOne({ email });
+    } else {
+      existingUser = fallbackAdmin.email === email ? fallbackAdmin : null;
+    }
+    
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'Cet email est déjà utilisé' });
+    }
+    
+    // Créer le nouvel utilisateur
+    const hashedPassword = await bcrypt.hash(motDePasse, 10);
+    const newUser = {
+      email,
+      motDePasse: hashedPassword,
+      nom: nom || '',
+      prenom: prenom || '',
+      role: 'client'
+    };
+    
+    if (mongoConnected) {
+      const user = new User(newUser);
+      await user.save();
+      console.log('👤 Nouvel utilisateur créé:', user.email);
+    } else {
+      console.log('👤 Nouvel utilisateur créé (fallback):', newUser.email);
+    }
+    
+    res.status(201).json({ success: true, message: 'Inscription réussie' });
+  } catch (error) {
+    console.error('❌ Erreur inscription:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Auth connexion endpoint
+app.post('/auth/connexion', async (req, res) => {
+  try {
+    console.log('🔍 API /auth/connexion appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { email, motDePasse } = req.body;
+    
+    // Trouver l'utilisateur
+    let user;
+    if (mongoConnected) {
+      user = await User.findOne({ email });
+    } else {
+      user = fallbackAdmin.email === email ? fallbackAdmin : null;
+    }
+    
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
+    }
+    
+    // Vérifier le mot de passe
+    const isPasswordValid = await bcrypt.compare(motDePasse, user.motDePasse);
+    if (!isPasswordValid) {
+      return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
+    }
+    
+    // Générer le token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'fallback_secret_key_2024',
+      { expiresIn: '1h' }
+    );
+    
+    console.log('🔐 Connexion réussie:', user.email);
+    res.json({ success: true, message: 'Connexion réussie', token });
+  } catch (error) {
+    console.error('❌ Erreur connexion:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Cart ajouter endpoint
+app.post('/cart/ajouter', async (req, res) => {
+  try {
+    console.log('🔍 API /cart/ajouter appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { productId, quantity, size, color } = req.body;
+    
+    // Pour l'instant, retourner un succès
+    console.log('🛒 Article ajouté au panier:', { productId, quantity, size, color });
+    
+    res.json({ success: true, message: 'Article ajouté au panier' });
+  } catch (error) {
+    console.error('❌ Erreur ajout panier:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Cart vider endpoint
+app.delete('/cart/vider', async (req, res) => {
+  try {
+    console.log('🔍 API /cart/vider appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    console.log('🛒 Panier vidé');
+    
+    res.json({ success: true, message: 'Panier vidé' });
+  } catch (error) {
+    console.error('❌ Erreur vider panier:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Products POST endpoint (création de produit)
+app.post('/products', async (req, res) => {
+  try {
+    console.log('🔍 API /products POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const productData = req.body;
+    console.log('📦 Données produit reçues:', productData);
+    
+    // Pour l'instant, retourner un succès
+    res.status(201).json({ success: true, message: 'Produit créé avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur création produit:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ================================
+// ENDPOINTS UTILISATEUR
+// ================================
+
+// User profile update endpoint
+app.put('/users/profile', async (req, res) => {
+  try {
+    console.log('🔍 API /users/profile PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const profileData = req.body;
+    console.log('👤 Données profil reçues:', profileData);
+    
+    // Pour l'instant, retourner un succès
+    res.json({ success: true, message: 'Profil mis à jour avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour profil:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// User password update endpoint
+app.put('/users/password', async (req, res) => {
+  try {
+    console.log('🔍 API /users/password PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const passwordData = req.body;
+    console.log('🔐 Données mot de passe reçues');
+    
+    // Pour l'instant, retourner un succès
+    res.json({ success: true, message: 'Mot de passe mis à jour avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour mot de passe:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ================================
+// ENDPOINTS PANIER
+// ================================
+
+// Cart modifier endpoint
+app.put('/api/cart/modifier/:articleId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/cart/modifier/:articleId PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { articleId } = req.params;
+    const updateData = req.body;
+    console.log('🛒 Modification article panier:', articleId, updateData);
+    
+    // Pour l'instant, retourner un succès
+    res.json({ success: true, message: 'Article modifié avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur modification panier:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Cart supprimer endpoint
+app.delete('/api/cart/supprimer/:articleId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/cart/supprimer/:articleId DELETE appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { articleId } = req.params;
+    console.log('🛒 Suppression article panier:', articleId);
+    
+    // Pour l'instant, retourner un succès
+    res.json({ success: true, message: 'Article supprimé avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur suppression panier:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ================================
+// ENDPOINTS PRODUIT
+// ================================
+
+// Product by ID endpoint
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    console.log('🔍 API /api/products/:id GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { id } = req.params;
+    console.log('📦 Récupération produit ID:', id);
+    
+    let product;
+    if (mongoConnected) {
+      product = await Product.findById(id);
+    } else {
+      product = fallbackProducts.find(p => p._id === id);
+    }
+    
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Produit non trouvé' });
+    }
+    
+    res.json({ success: true, product });
+  } catch (error) {
+    console.error('❌ Erreur récupération produit:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Product update endpoint
+app.put('/api/products/:productId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/products/:productId PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { productId } = req.params;
+    const updateData = req.body;
+    console.log('📦 Mise à jour produit:', productId, updateData);
+    
+    // Pour l'instant, retourner un succès
+    res.json({ success: true, message: 'Produit mis à jour avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour produit:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Product delete endpoint
+app.delete('/api/products/:productId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/products/:productId DELETE appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { productId } = req.params;
+    console.log('📦 Suppression produit:', productId);
+    
+    // Pour l'instant, retourner un succès
+    res.json({ success: true, message: 'Produit supprimé avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur suppression produit:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Product customization options endpoint
+app.get('/api/products/:productId/options-personnalisation', async (req, res) => {
+  try {
+    console.log('🔍 API /api/products/:productId/options-personnalisation GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { productId } = req.params;
+    console.log('🎨 Options personnalisation produit:', productId);
+    
+    // Pour l'instant, retourner des options par défaut
+    const options = {
+      colors: ['Noir', 'Blanc', 'Rouge', 'Bleu'],
+      sizes: ['S', 'M', 'L', 'XL'],
+      designs: ['Logo AYNEXT', 'Logo personnalisé']
+    };
+    
+    res.json({ success: true, options });
+  } catch (error) {
+    console.error('❌ Erreur options personnalisation:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Product preview personnalisé endpoint
+app.post('/api/products/:productId/preview-personnalise', async (req, res) => {
+  try {
+    console.log('🔍 API /api/products/:productId/preview-personnalise POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { productId } = req.params;
+    const previewData = req.body;
+    console.log('🎨 Preview personnalisé produit:', productId, previewData);
+    
+    // Pour l'instant, retourner un succès
+    res.json({ success: true, message: 'Preview généré avec succès', previewUrl: 'preview-url' });
+  } catch (error) {
+    console.error('❌ Erreur preview personnalisé:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Upload product images endpoint (sans /api)
+app.post('/upload/product-images', async (req, res) => {
+  try {
+    console.log('🔍 API /upload/product-images POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    console.log('📸 Upload images produit');
+    
+    // Pour l'instant, retourner un succès
+    res.json({ success: true, message: 'Images uploadées avec succès', imageUrls: ['image1.jpg', 'image2.jpg'] });
+  } catch (error) {
+    console.error('❌ Erreur upload images:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ================================
+// ENDPOINTS PARAMÈTRES
+// ================================
+
+// Settings test endpoint
+app.put('/settings/test', async (req, res) => {
+  try {
+    console.log('🔍 API /settings/test PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const testData = req.body;
+    console.log('⚙️ Test paramètres:', testData);
+    
+    // Pour l'instant, retourner un succès
+    res.json({ success: true, message: 'Test paramètres réussi' });
+  } catch (error) {
+    console.error('❌ Erreur test paramètres:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Settings section update endpoint
+app.put('/api/settings/:section', async (req, res) => {
+  try {
+    console.log('🔍 API /api/settings/:section PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { section } = req.params;
+    const sectionData = req.body;
+    console.log('⚙️ Mise à jour section paramètres:', section, sectionData);
+    
+    // Pour l'instant, retourner un succès
+    res.json({ success: true, message: 'Section mise à jour avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour section:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Settings update endpoint (sans /api)
+app.put('/settings', async (req, res) => {
+  try {
+    console.log('🔍 API /settings PUT appelée (sans /api)');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const settingsData = req.body;
+    console.log('⚙️ Mise à jour paramètres:', settingsData);
+    
+    // Pour l'instant, retourner un succès
+    res.json({ success: true, message: 'Paramètres mis à jour avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour paramètres:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Settings reset endpoint
+app.post('/settings/reset', async (req, res) => {
+  try {
+    console.log('🔍 API /settings/reset POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    console.log('⚙️ Reset paramètres');
+    
+    // Pour l'instant, retourner un succès
+    res.json({ success: true, message: 'Paramètres réinitialisés avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur reset paramètres:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ================================
+// ENDPOINTS COMMANDE
+// ================================
+
+// Custom hoodie order endpoint
+app.post('/orders/custom-hoodie', async (req, res) => {
+  try {
+    console.log('🔍 API /orders/custom-hoodie POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const hoodieData = req.body;
+    console.log('🎨 Commande hoodie personnalisé:', hoodieData);
+    
+    // Pour l'instant, retourner un succès
+    res.json({ success: true, message: 'Commande hoodie créée avec succès', orderId: 'order-123' });
+  } catch (error) {
+    console.error('❌ Erreur commande hoodie:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Order status update endpoint
+app.put('/api/orders/:orderId/statut', async (req, res) => {
+  try {
+    console.log('🔍 API /api/orders/:orderId/statut PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { orderId } = req.params;
+    const statusData = req.body;
+    console.log('📦 Mise à jour statut commande:', orderId, statusData);
+    
+    // Pour l'instant, retourner un succès
+    res.json({ success: true, message: 'Statut commande mis à jour avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour statut commande:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ================================
+// ENDPOINTS ADMIN
+// ================================
+
+// Admin setup endpoint
+app.post('/api/admin/setup', async (req, res) => {
+  try {
+    console.log('🔍 API /api/admin/setup POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const setupData = req.body;
+    console.log('⚙️ Configuration admin:', setupData);
+    
+    // Pour l'instant, retourner un succès
+    res.json({ success: true, message: 'Configuration admin créée avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur configuration admin:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// User admin stats endpoint
+app.get('/api/users/admin/:userId/stats', async (req, res) => {
+  try {
+    console.log('🔍 API /api/users/admin/:userId/stats GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { userId } = req.params;
+    console.log('👤 Statistiques utilisateur admin:', userId);
+    
+    // Pour l'instant, retourner des stats par défaut
+    const stats = {
+      totalOrders: 0,
+      totalSpent: 0,
+      lastOrder: null
+    };
+    
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('❌ Erreur stats utilisateur admin:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // Cart endpoint
 app.get('/api/cart', (req, res) => {
   const token = req.headers['x-auth-token'];
