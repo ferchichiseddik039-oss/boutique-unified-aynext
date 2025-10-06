@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Configuration API avec URL du backend Render
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://boutique-backend-6rx5.onrender.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 // Configuration de base pour axios
 const api = axios.create({
