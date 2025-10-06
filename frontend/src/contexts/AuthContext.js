@@ -103,11 +103,15 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const res = await api.post('/api/auth/connexion', credentials);
       if (res.data.success) {
-        const { token } = res.data;
-        localStorage.setItem('token', token);
-        setToken(token);
+        const { token: newToken, user: newUser } = res.data;
+        
+        setToken(newToken);
+        setUser(newUser);
+        localStorage.setItem('token', newToken);
+        api.defaults.headers.common['x-auth-token'] = newToken;
+        
         toast.success('Connexion réussie !');
-        return { success: true, token };
+        return { success: true };
       }
     } catch (err) {
       const message = err.response?.data?.message || 'Erreur lors de la connexion';
@@ -123,11 +127,15 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const res = await api.post('/api/auth/connexion-admin', credentials);
       if (res.data.success) {
-        const { token } = res.data;
-        localStorage.setItem('token', token);
-        setToken(token);
+        const { token: newToken, user: newUser } = res.data;
+        
+        setToken(newToken);
+        setUser(newUser);
+        localStorage.setItem('token', newToken);
+        api.defaults.headers.common['x-auth-token'] = newToken;
+        
         toast.success('Connexion admin réussie !');
-        return { success: true, token };
+        return { success: true };
       }
     } catch (err) {
       const message = err.response?.data?.message || 'Erreur lors de la connexion admin';
@@ -142,6 +150,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
+    delete api.defaults.headers.common['x-auth-token'];
     toast.success('Déconnexion réussie !');
   };
 
@@ -205,7 +214,7 @@ export const AuthProvider = ({ children }) => {
       const res = await api.get('/api/admin/stats');
       return res.data;
     } catch (err) {
-      console.error('Erreur stats admin:', err);
+      console.error('Erreur récupération stats admin:', err);
       throw err;
     }
   };
@@ -276,125 +285,9 @@ export const AuthProvider = ({ children }) => {
       const res = await api.get(`/api/users/admin/${userId}/stats`);
       return res.data;
     } catch (err) {
-      console.error('Erreur stats utilisateur:', err);
+      console.error('Erreur récupération stats utilisateur:', err);
       throw err;
     }
-  };
-
-  // Inscription
-  const register = async (userData) => {
-    try {
-      const res = await api.post('/auth/inscription', userData);
-      if (res.data.success) {
-        const { token: newToken, user: newUser } = res.data;
-        
-        setToken(newToken);
-        setUser(newUser);
-        localStorage.setItem('token', newToken);
-        api.defaults.headers.common['x-auth-token'] = newToken;
-        
-        toast.success('Inscription réussie !');
-        return { success: true };
-      } else {
-        throw new Error(res.data.message || 'Erreur lors de l\'inscription');
-      }
-    } catch (err) {
-      const message = err.response?.data?.message || 'Erreur lors de l\'inscription';
-      toast.error(message);
-      return { success: false, message };
-    }
-  };
-
-  // Connexion (clients uniquement)
-  const login = async (credentials) => {
-    try {
-      const res = await api.post('/auth/connexion', credentials);
-      if (res.data.success) {
-        const { token: newToken, user: newUser } = res.data;
-        
-        setToken(newToken);
-        setUser(newUser);
-        localStorage.setItem('token', newToken);
-        api.defaults.headers.common['x-auth-token'] = newToken;
-        
-        toast.success('Connexion réussie !');
-        return { success: true };
-      } else {
-        throw new Error(res.data.message || 'Erreur lors de la connexion');
-      }
-    } catch (err) {
-      const message = err.response?.data?.message || 'Erreur lors de la connexion';
-      toast.error(message);
-      return { success: false, message };
-    }
-  };
-
-  // Connexion admin
-  const loginAdmin = async (credentials) => {
-    try {
-      const res = await api.post('/auth/connexion-admin', credentials);
-      if (res.data.success) {
-        const { token: newToken, user: newUser } = res.data;
-        
-        setToken(newToken);
-        setUser(newUser);
-        localStorage.setItem('token', newToken);
-        api.defaults.headers.common['x-auth-token'] = newToken;
-        
-        toast.success('Connexion administrateur réussie !');
-        return { success: true };
-      } else {
-        throw new Error(res.data.message || 'Erreur lors de la connexion admin');
-      }
-    } catch (err) {
-      const message = err.response?.data?.message || 'Erreur lors de la connexion admin';
-      toast.error(message);
-      return { success: false, message };
-    }
-  };
-
-  // Déconnexion
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('token');
-    delete api.defaults.headers.common['x-auth-token'];
-    toast.success('Déconnexion réussie');
-  };
-
-  // Mettre à jour le profil
-  const updateProfile = async (profileData) => {
-    try {
-      const res = await api.put('/users/profile', profileData);
-      setUser(res.data);
-      toast.success('Profil mis à jour avec succès !');
-      return { success: true };
-    } catch (err) {
-      const message = err.response?.data?.message || 'Erreur lors de la mise à jour du profil';
-      toast.error(message);
-      return { success: false, message };
-    }
-  };
-
-  // Changer le mot de passe
-  const changePassword = async (passwordData) => {
-    try {
-      await api.put('/users/password', passwordData);
-      toast.success('Mot de passe mis à jour avec succès !');
-      return { success: true };
-    } catch (err) {
-      const message = err.response?.data?.message || 'Erreur lors du changement de mot de passe';
-      toast.error(message);
-      return { success: false, message };
-    }
-  };
-
-  // Méthode pour définir le token (utilisée par OAuth)
-  const setAuthToken = (newToken) => {
-    setToken(newToken);
-    localStorage.setItem('token', newToken);
-    api.defaults.headers.common['x-auth-token'] = newToken;
-    loadUser(); // Recharger les informations utilisateur
   };
 
   const value = {
