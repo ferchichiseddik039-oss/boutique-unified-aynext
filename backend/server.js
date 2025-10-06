@@ -2415,6 +2415,494 @@ app.post('/api/auth/connexion-admin', async (req, res) => {
   }
 });
 
+// 👑 ENDPOINTS ADMINISTRATEUR COMPLETS
+app.get('/api/admin/check', async (req, res) => {
+  try {
+    console.log('🔍 API /api/admin/check appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    res.json({ success: true, exists: true });
+  } catch (error) {
+    console.error('❌ Erreur admin check:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/admin/check', async (req, res) => {
+  try {
+    console.log('🔍 API /admin/check appelée (sans /api)');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    res.json({ success: true, exists: true });
+  } catch (error) {
+    console.error('❌ Erreur admin check:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/admin/stats', async (req, res) => {
+  try {
+    console.log('🔍 API /api/admin/stats appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    let stats = {
+      totalUsers: 0,
+      totalProducts: 0,
+      totalOrders: 0,
+      totalRevenue: 0,
+      recentOrders: [],
+      topProducts: []
+    };
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération stats depuis MongoDB...');
+      stats.totalUsers = await User.countDocuments();
+      stats.totalProducts = await Product.countDocuments();
+      stats.totalOrders = await Order.countDocuments();
+      
+      // Calculer le revenu total
+      const orders = await Order.find();
+      stats.totalRevenue = orders.reduce((total, order) => total + (order.totalCommande || 0), 0);
+      
+      // Commandes récentes
+      stats.recentOrders = await Order.find()
+        .sort({ dateCommande: -1 })
+        .limit(5)
+        .select('numeroCommande totalCommande dateCommande statut');
+      
+      // Produits populaires
+      stats.topProducts = await Product.find()
+        .sort({ dateCreation: -1 })
+        .limit(5)
+        .select('nom prix images');
+    } else {
+      console.log('⚠️ Utilisation des stats de fallback');
+      stats = {
+        totalUsers: 1,
+        totalProducts: 4,
+        totalOrders: 0,
+        totalRevenue: 0,
+        recentOrders: [],
+        topProducts: fallbackProducts.slice(0, 5)
+      };
+    }
+    
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('❌ Erreur stats admin:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/admin/setup', async (req, res) => {
+  try {
+    console.log('🔍 API /api/admin/setup appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { email, motDePasse, nom, prenom } = req.body;
+    console.log('👑 Configuration admin:', { email, nom, prenom });
+    
+    // Vérifier si un admin existe déjà
+    let existingAdmin;
+    if (mongoConnected) {
+      existingAdmin = await User.findOne({ role: 'admin' });
+    }
+    
+    if (existingAdmin) {
+      return res.status(400).json({ success: false, message: 'Un administrateur existe déjà' });
+    }
+    
+    // Créer l'admin
+    const hashedPassword = await bcrypt.hash(motDePasse, 10);
+    const adminData = {
+      email,
+      motDePasse: hashedPassword,
+      nom: nom || 'Admin',
+      prenom: prenom || 'Administrateur',
+      role: 'admin'
+    };
+    
+    if (mongoConnected) {
+      const admin = new User(adminData);
+      await admin.save();
+      console.log('👑 Administrateur créé:', admin.email);
+    } else {
+      console.log('👑 Administrateur créé (fallback):', adminData.email);
+    }
+    
+    res.status(201).json({ success: true, message: 'Administrateur créé avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur configuration admin:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// 👥 ENDPOINTS GESTION UTILISATEURS COMPLETS
+app.get('/api/users', async (req, res) => {
+  try {
+    console.log('🔍 API /api/users GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { limit = 10, page = 1, role, search } = req.query;
+    console.log('👥 Paramètres utilisateurs:', { limit, page, role, search });
+    
+    let users = [];
+    let total = 0;
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération utilisateurs depuis MongoDB...');
+      // Construire le filtre
+      let filter = {};
+      if (role) filter.role = role;
+      if (search) {
+        filter.$or = [
+          { nom: { $regex: search, $options: 'i' } },
+          { prenom: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } }
+        ];
+      }
+      
+      // Récupérer les utilisateurs avec pagination
+      const skip = (page - 1) * limit;
+      users = await User.find(filter)
+        .select('-motDePasse')
+        .sort({ dateCreation: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+      
+      total = await User.countDocuments(filter);
+      console.log('👥 Utilisateurs trouvés:', users.length, 'Total:', total);
+    } else {
+      console.log('⚠️ Utilisation des utilisateurs de fallback');
+      users = [fallbackAdmin];
+      total = 1;
+    }
+    
+    res.json({ 
+      success: true, 
+      users, 
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit)
+    });
+  } catch (error) {
+    console.error('❌ Erreur récupération utilisateurs:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/users/:userId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/users/:userId GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { userId } = req.params;
+    let user;
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération utilisateur depuis MongoDB...');
+      user = await User.findById(userId).select('-motDePasse');
+    } else {
+      console.log('⚠️ Utilisation de l\'utilisateur de fallback');
+      user = fallbackAdmin;
+    }
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+    
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('❌ Erreur récupération utilisateur:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.put('/api/users/:userId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/users/:userId PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { userId } = req.params;
+    const updateData = req.body;
+    console.log('👤 Mise à jour utilisateur:', userId, updateData);
+    
+    if (mongoConnected) {
+      const user = await User.findByIdAndUpdate(userId, updateData, { new: true }).select('-motDePasse');
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+      }
+      console.log('👤 Utilisateur mis à jour:', user.email);
+    }
+    
+    res.json({ success: true, message: 'Utilisateur mis à jour avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour utilisateur:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.delete('/api/users/:userId', async (req, res) => {
+  try {
+    console.log('🔍 API /api/users/:userId DELETE appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { userId } = req.params;
+    console.log('👤 Suppression utilisateur:', userId);
+    
+    if (mongoConnected) {
+      const user = await User.findByIdAndDelete(userId);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+      }
+      console.log('👤 Utilisateur supprimé:', user.email);
+    }
+    
+    res.json({ success: true, message: 'Utilisateur supprimé avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur suppression utilisateur:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/users/admin/tous', async (req, res) => {
+  try {
+    console.log('🔍 API /api/users/admin/tous appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { limit = 10, page = 1, role, search } = req.query;
+    console.log('👥 Paramètres utilisateurs admin:', { limit, page, role, search });
+    
+    let users = [];
+    let total = 0;
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération utilisateurs admin depuis MongoDB...');
+      // Construire le filtre
+      let filter = {};
+      if (role) filter.role = role;
+      if (search) {
+        filter.$or = [
+          { nom: { $regex: search, $options: 'i' } },
+          { prenom: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } }
+        ];
+      }
+      
+      // Récupérer les utilisateurs avec pagination
+      const skip = (page - 1) * limit;
+      users = await User.find(filter)
+        .select('-motDePasse')
+        .sort({ dateCreation: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+      
+      total = await User.countDocuments(filter);
+      console.log('👥 Utilisateurs admin trouvés:', users.length, 'Total:', total);
+    } else {
+      console.log('⚠️ Utilisation des utilisateurs de fallback');
+      users = [fallbackAdmin];
+      total = 1;
+    }
+    
+    res.json({ 
+      success: true, 
+      users, 
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit)
+    });
+  } catch (error) {
+    console.error('❌ Erreur récupération utilisateurs admin:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/users/admin/:userId/stats', async (req, res) => {
+  try {
+    console.log('🔍 API /api/users/admin/:userId/stats GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { userId } = req.params;
+    console.log('👤 Statistiques utilisateur admin:', userId);
+    
+    let stats = {
+      totalOrders: 0,
+      totalSpent: 0,
+      lastOrder: null,
+      favoriteCategory: null
+    };
+    
+    if (mongoConnected) {
+      // Compter les commandes de l'utilisateur
+      const orders = await Order.find({ 'client.email': userId });
+      stats.totalOrders = orders.length;
+      stats.totalSpent = orders.reduce((total, order) => total + (order.totalCommande || 0), 0);
+      
+      if (orders.length > 0) {
+        stats.lastOrder = orders.sort((a, b) => new Date(b.dateCommande) - new Date(a.dateCommande))[0];
+      }
+    }
+    
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('❌ Erreur stats utilisateur admin:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.put('/users/profile', async (req, res) => {
+  try {
+    console.log('🔍 API /users/profile PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const profileData = req.body;
+    const token = req.headers['x-auth-token'];
+    
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Token manquant' });
+    }
+    
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_2024');
+      
+      if (mongoConnected) {
+        const user = await User.findByIdAndUpdate(decoded.userId, profileData, { new: true }).select('-motDePasse');
+        if (!user) {
+          return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+        }
+        console.log('👤 Profil mis à jour:', user.email);
+      }
+      
+      res.json({ success: true, message: 'Profil mis à jour avec succès' });
+    } catch (jwtError) {
+      res.status(401).json({ success: false, message: 'Token invalide' });
+    }
+  } catch (error) {
+    console.error('❌ Erreur mise à jour profil:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.put('/users/password', async (req, res) => {
+  try {
+    console.log('🔍 API /users/password PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { currentPassword, newPassword } = req.body;
+    const token = req.headers['x-auth-token'];
+    
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Token manquant' });
+    }
+    
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_2024');
+      
+      if (mongoConnected) {
+        const user = await User.findById(decoded.userId);
+        if (!user) {
+          return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+        }
+        
+        // Vérifier le mot de passe actuel
+        const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.motDePasse);
+        if (!isCurrentPasswordValid) {
+          return res.status(400).json({ success: false, message: 'Mot de passe actuel incorrect' });
+        }
+        
+        // Hacher le nouveau mot de passe
+        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+        user.motDePasse = hashedNewPassword;
+        await user.save();
+        
+        console.log('🔐 Mot de passe mis à jour:', user.email);
+      }
+      
+      res.json({ success: true, message: 'Mot de passe mis à jour avec succès' });
+    } catch (jwtError) {
+      res.status(401).json({ success: false, message: 'Token invalide' });
+    }
+  } catch (error) {
+    console.error('❌ Erreur changement mot de passe:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // Orders admin toutes endpoint (sans /api)
 app.get('/orders/admin/toutes', async (req, res) => {
   try {
