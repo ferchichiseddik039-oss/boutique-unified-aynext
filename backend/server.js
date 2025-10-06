@@ -61,6 +61,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Serve static files from the React build folder
 app.use(express.static(path.join(__dirname, '../frontend/build')));
 
+// Serve uploaded images
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Dummy Models (used if MongoDB is disconnected, or for fallback data)
 const User = mongoose.models.User || mongoose.model('User', new mongoose.Schema({
   email: { type: String, required: true, unique: true },
@@ -342,6 +345,78 @@ app.get('/manifest.json', (req, res) => {
     "theme_color": "#000000",
     "background_color": "#ffffff"
   });
+});
+
+// Users endpoint (pour l'admin)
+app.get('/api/users', async (req, res) => {
+  try {
+    console.log('🔍 API /api/users appelée');
+    console.log('📊 mongoConnected:', mongoConnected);
+    
+    let users;
+    if (mongoConnected) {
+      console.log('🗄️ Récupération depuis MongoDB...');
+      users = await User.find();
+      console.log('👥 Utilisateurs trouvés:', users.length);
+    } else {
+      console.log('⚠️ Utilisation des utilisateurs de fallback');
+      users = [fallbackAdmin];
+    }
+    res.json({ success: true, users });
+  } catch (error) {
+    console.error('❌ Erreur récupération utilisateurs:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Orders endpoint (pour l'admin)
+app.get('/api/orders', async (req, res) => {
+  try {
+    console.log('🔍 API /api/orders appelée');
+    console.log('📊 mongoConnected:', mongoConnected);
+    
+    // Pour l'instant, retourner des commandes vides
+    // Tu peux ajouter un modèle Order plus tard
+    const orders = [];
+    console.log('📦 Commandes trouvées:', orders.length);
+    
+    res.json({ success: true, orders });
+  } catch (error) {
+    console.error('❌ Erreur récupération commandes:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Stats endpoint (pour le dashboard admin)
+app.get('/api/stats', async (req, res) => {
+  try {
+    console.log('🔍 API /api/stats appelée');
+    console.log('📊 mongoConnected:', mongoConnected);
+    
+    let stats = {
+      totalUsers: 0,
+      totalProducts: 0,
+      totalOrders: 0,
+      totalRevenue: 0
+    };
+    
+    if (mongoConnected) {
+      console.log('🗄️ Calcul des statistiques depuis MongoDB...');
+      stats.totalUsers = await User.countDocuments();
+      stats.totalProducts = await Product.countDocuments();
+      // stats.totalOrders = await Order.countDocuments(); // À ajouter plus tard
+      console.log('📊 Stats calculées:', stats);
+    } else {
+      console.log('⚠️ Utilisation des stats de fallback');
+      stats.totalUsers = 1; // fallbackAdmin
+      stats.totalProducts = fallbackProducts.length;
+    }
+    
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('❌ Erreur récupération statistiques:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
 });
 
 // Cart endpoint
