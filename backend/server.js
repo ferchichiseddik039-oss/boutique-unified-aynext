@@ -28,8 +28,13 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 // Middleware CORS
 app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  origin: [
+    "https://boutique-unified-aynext.onrender.com", // Frontend Render
+    "http://localhost:3000", // Local development
+    "http://localhost:5001"  // Local development alternative
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"],
   credentials: true
 }));
 
