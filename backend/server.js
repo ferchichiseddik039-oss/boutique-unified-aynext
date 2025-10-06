@@ -839,7 +839,26 @@ app.get('/admin/check', async (req, res) => {
   }
 });
 
-// Auth inscription endpoint
+// Admin check endpoint (avec /api)
+app.get('/api/admin/check', async (req, res) => {
+  try {
+    console.log('🔍 API /api/admin/check appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    res.json({ success: true, exists: true });
+  } catch (error) {
+    console.error('❌ Erreur admin check:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Auth inscription endpoint (sans /api)
 app.post('/auth/inscription', async (req, res) => {
   try {
     console.log('🔍 API /auth/inscription appelée');
@@ -890,10 +909,108 @@ app.post('/auth/inscription', async (req, res) => {
   }
 });
 
-// Auth connexion endpoint
+// Auth inscription endpoint (avec /api)
+app.post('/api/auth/inscription', async (req, res) => {
+  try {
+    console.log('🔍 API /api/auth/inscription appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { email, motDePasse, nom, prenom } = req.body;
+    
+    // Vérifier si l'utilisateur existe déjà
+    let existingUser;
+    if (mongoConnected) {
+      existingUser = await User.findOne({ email });
+    } else {
+      existingUser = fallbackAdmin.email === email ? fallbackAdmin : null;
+    }
+    
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'Cet email est déjà utilisé' });
+    }
+    
+    // Créer le nouvel utilisateur
+    const hashedPassword = await bcrypt.hash(motDePasse, 10);
+    const newUser = {
+      email,
+      motDePasse: hashedPassword,
+      nom: nom || '',
+      prenom: prenom || '',
+      role: 'client'
+    };
+    
+    if (mongoConnected) {
+      const user = new User(newUser);
+      await user.save();
+      console.log('👤 Nouvel utilisateur créé:', user.email);
+    } else {
+      console.log('👤 Nouvel utilisateur créé (fallback):', newUser.email);
+    }
+    
+    res.status(201).json({ success: true, message: 'Inscription réussie' });
+  } catch (error) {
+    console.error('❌ Erreur inscription:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Auth connexion endpoint (sans /api)
 app.post('/auth/connexion', async (req, res) => {
   try {
     console.log('🔍 API /auth/connexion appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { email, motDePasse } = req.body;
+    
+    // Trouver l'utilisateur
+    let user;
+    if (mongoConnected) {
+      user = await User.findOne({ email });
+    } else {
+      user = fallbackAdmin.email === email ? fallbackAdmin : null;
+    }
+    
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
+    }
+    
+    // Vérifier le mot de passe
+    const isPasswordValid = await bcrypt.compare(motDePasse, user.motDePasse);
+    if (!isPasswordValid) {
+      return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
+    }
+    
+    // Générer le token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'fallback_secret_key_2024',
+      { expiresIn: '1h' }
+    );
+    
+    console.log('🔐 Connexion réussie:', user.email);
+    res.json({ success: true, message: 'Connexion réussie', token });
+  } catch (error) {
+    console.error('❌ Erreur connexion:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Auth connexion endpoint (avec /api)
+app.post('/api/auth/connexion', async (req, res) => {
+  try {
+    console.log('🔍 API /api/auth/connexion appelée');
     
     // Headers anti-cache
     res.set({
