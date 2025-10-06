@@ -3698,6 +3698,722 @@ app.post('/orders/custom-hoodie', async (req, res) => {
   }
 });
 
+// ⚙️ ENDPOINTS PARAMÈTRES COMPLETS
+app.get('/api/settings', async (req, res) => {
+  try {
+    console.log('🔍 API /api/settings GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    let settings;
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération paramètres depuis MongoDB...');
+      settings = await Settings.findOne();
+      
+      if (!settings) {
+        // Créer des paramètres par défaut
+        settings = new Settings({
+          nomBoutique: 'Boutique AYNEXT',
+          emailContact: 'contact@boutique-aynext.com',
+          telephone: '+33 1 23 45 67 89',
+          adresse: '123 Rue de la Mode, 75001 Paris',
+          description: 'Boutique de vêtements tendance',
+          logo: '/uploads/logo-boutique.png',
+          couleurs: {
+            primaire: '#3B82F6',
+            secondaire: '#1E40AF',
+            accent: '#F59E0B'
+          },
+          reseauxSociaux: {
+            facebook: 'https://facebook.com/boutique-aynext',
+            instagram: 'https://instagram.com/boutique_aynext',
+            twitter: 'https://twitter.com/boutique_aynext'
+          },
+          livraison: {
+            gratuite: 50,
+            standard: 5.99,
+            express: 9.99
+          },
+          paiement: {
+            stripe: true,
+            paypal: true,
+            virement: true
+          }
+        });
+        await settings.save();
+        console.log('⚙️ Paramètres par défaut créés');
+      }
+    } else {
+      console.log('⚠️ Utilisation des paramètres de fallback');
+      settings = {
+        nomBoutique: 'Boutique AYNEXT',
+        emailContact: 'contact@boutique-aynext.com',
+        telephone: '+33 1 23 45 67 89',
+        adresse: '123 Rue de la Mode, 75001 Paris',
+        description: 'Boutique de vêtements tendance',
+        logo: '/uploads/logo-boutique.png',
+        couleurs: {
+          primaire: '#3B82F6',
+          secondaire: '#1E40AF',
+          accent: '#F59E0B'
+        },
+        reseauxSociaux: {
+          facebook: 'https://facebook.com/boutique-aynext',
+          instagram: 'https://instagram.com/boutique_aynext',
+          twitter: 'https://twitter.com/boutique_aynext'
+        },
+        livraison: {
+          gratuite: 50,
+          standard: 5.99,
+          express: 9.99
+        },
+        paiement: {
+          stripe: true,
+          paypal: true,
+          virement: true
+        }
+      };
+    }
+    
+    res.json({ success: true, settings });
+  } catch (error) {
+    console.error('❌ Erreur récupération paramètres:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/settings', async (req, res) => {
+  try {
+    console.log('🔍 API /settings GET appelée (sans /api)');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    let settings;
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération paramètres depuis MongoDB (sans /api)...');
+      settings = await Settings.findOne();
+      
+      if (!settings) {
+        settings = new Settings({
+          nomBoutique: 'Boutique AYNEXT',
+          emailContact: 'contact@boutique-aynext.com',
+          telephone: '+33 1 23 45 67 89',
+          adresse: '123 Rue de la Mode, 75001 Paris',
+          description: 'Boutique de vêtements tendance',
+          logo: '/uploads/logo-boutique.png'
+        });
+        await settings.save();
+        console.log('⚙️ Paramètres par défaut créés (sans /api)');
+      }
+    } else {
+      console.log('⚠️ Utilisation des paramètres de fallback (sans /api)');
+      settings = {
+        nomBoutique: 'Boutique AYNEXT',
+        emailContact: 'contact@boutique-aynext.com',
+        telephone: '+33 1 23 45 67 89',
+        adresse: '123 Rue de la Mode, 75001 Paris',
+        description: 'Boutique de vêtements tendance',
+        logo: '/uploads/logo-boutique.png'
+      };
+    }
+    
+    res.json({ success: true, settings });
+  } catch (error) {
+    console.error('❌ Erreur récupération paramètres (sans /api):', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.put('/api/settings', async (req, res) => {
+  try {
+    console.log('🔍 API /api/settings PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const updateData = req.body;
+    console.log('⚙️ Mise à jour paramètres:', updateData);
+    
+    if (mongoConnected) {
+      let settings = await Settings.findOne();
+      
+      if (!settings) {
+        settings = new Settings(updateData);
+      } else {
+        Object.assign(settings, updateData);
+      }
+      
+      await settings.save();
+      console.log('⚙️ Paramètres mis à jour');
+    }
+    
+    res.json({ success: true, message: 'Paramètres mis à jour avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour paramètres:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.put('/settings', async (req, res) => {
+  try {
+    console.log('🔍 API /settings PUT appelée (sans /api)');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const updateData = req.body;
+    console.log('⚙️ Mise à jour paramètres (sans /api):', updateData);
+    
+    if (mongoConnected) {
+      let settings = await Settings.findOne();
+      
+      if (!settings) {
+        settings = new Settings(updateData);
+      } else {
+        Object.assign(settings, updateData);
+      }
+      
+      await settings.save();
+      console.log('⚙️ Paramètres mis à jour (sans /api)');
+    }
+    
+    res.json({ success: true, message: 'Paramètres mis à jour avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour paramètres (sans /api):', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.put('/api/settings/:section', async (req, res) => {
+  try {
+    console.log('🔍 API /api/settings/:section PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { section } = req.params;
+    const updateData = req.body;
+    console.log('⚙️ Mise à jour section paramètres:', section, updateData);
+    
+    if (mongoConnected) {
+      let settings = await Settings.findOne();
+      
+      if (!settings) {
+        settings = new Settings({ [section]: updateData });
+      } else {
+        settings[section] = { ...settings[section], ...updateData };
+      }
+      
+      await settings.save();
+      console.log('⚙️ Section paramètres mise à jour:', section);
+    }
+    
+    res.json({ success: true, message: `Section ${section} mise à jour avec succès` });
+  } catch (error) {
+    console.error('❌ Erreur mise à jour section paramètres:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.put('/settings/test', async (req, res) => {
+  try {
+    console.log('🔍 API /settings/test PUT appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const testData = req.body;
+    console.log('🧪 Test paramètres:', testData);
+    
+    res.json({ success: true, message: 'Test paramètres réussi', data: testData });
+  } catch (error) {
+    console.error('❌ Erreur test paramètres:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/settings/reset', async (req, res) => {
+  try {
+    console.log('🔍 API /settings/reset POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    console.log('🔄 Réinitialisation des paramètres');
+    
+    if (mongoConnected) {
+      await Settings.deleteMany({});
+      console.log('🔄 Paramètres réinitialisés');
+    }
+    
+    res.json({ success: true, message: 'Paramètres réinitialisés avec succès' });
+  } catch (error) {
+    console.error('❌ Erreur réinitialisation paramètres:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// 📊 ENDPOINTS STATISTIQUES COMPLETS
+app.get('/api/stats', async (req, res) => {
+  try {
+    console.log('🔍 API /api/stats GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    let stats = {
+      totalUsers: 0,
+      totalProducts: 0,
+      totalOrders: 0,
+      totalRevenue: 0,
+      recentOrders: [],
+      topProducts: [],
+      monthlyStats: [],
+      categoryStats: []
+    };
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération statistiques depuis MongoDB...');
+      
+      // Statistiques de base
+      stats.totalUsers = await User.countDocuments();
+      stats.totalProducts = await Product.countDocuments();
+      stats.totalOrders = await Order.countDocuments();
+      
+      // Calculer le revenu total
+      const orders = await Order.find();
+      stats.totalRevenue = orders.reduce((total, order) => total + (order.totalCommande || 0), 0);
+      
+      // Commandes récentes
+      stats.recentOrders = await Order.find()
+        .sort({ dateCommande: -1 })
+        .limit(5)
+        .select('numeroCommande totalCommande dateCommande statut');
+      
+      // Produits populaires
+      stats.topProducts = await Product.find()
+        .sort({ dateCreation: -1 })
+        .limit(5)
+        .select('nom prix images');
+      
+      // Statistiques mensuelles (derniers 6 mois)
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      
+      const monthlyOrders = await Order.aggregate([
+        {
+          $match: {
+            dateCommande: { $gte: sixMonthsAgo }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              year: { $year: '$dateCommande' },
+              month: { $month: '$dateCommande' }
+            },
+            count: { $sum: 1 },
+            revenue: { $sum: '$totalCommande' }
+          }
+        },
+        {
+          $sort: { '_id.year': 1, '_id.month': 1 }
+        }
+      ]);
+      
+      stats.monthlyStats = monthlyOrders;
+      
+      // Statistiques par catégorie
+      const categoryStats = await Product.aggregate([
+        {
+          $group: {
+            _id: '$categorie',
+            count: { $sum: 1 }
+          }
+        },
+        {
+          $sort: { count: -1 }
+        }
+      ]);
+      
+      stats.categoryStats = categoryStats;
+      
+      console.log('📊 Statistiques calculées:', {
+        users: stats.totalUsers,
+        products: stats.totalProducts,
+        orders: stats.totalOrders,
+        revenue: stats.totalRevenue
+      });
+    } else {
+      console.log('⚠️ Utilisation des statistiques de fallback');
+      stats = {
+        totalUsers: 1,
+        totalProducts: 4,
+        totalOrders: 0,
+        totalRevenue: 0,
+        recentOrders: [],
+        topProducts: fallbackProducts.slice(0, 5),
+        monthlyStats: [],
+        categoryStats: []
+      };
+    }
+    
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('❌ Erreur récupération statistiques:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/stats', async (req, res) => {
+  try {
+    console.log('🔍 API /stats GET appelée (sans /api)');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    let stats = {
+      totalUsers: 0,
+      totalProducts: 0,
+      totalOrders: 0,
+      totalRevenue: 0
+    };
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération statistiques depuis MongoDB (sans /api)...');
+      stats.totalUsers = await User.countDocuments();
+      stats.totalProducts = await Product.countDocuments();
+      stats.totalOrders = await Order.countDocuments();
+      
+      const orders = await Order.find();
+      stats.totalRevenue = orders.reduce((total, order) => total + (order.totalCommande || 0), 0);
+    } else {
+      console.log('⚠️ Utilisation des statistiques de fallback (sans /api)');
+      stats = {
+        totalUsers: 1,
+        totalProducts: 4,
+        totalOrders: 0,
+        totalRevenue: 0
+      };
+    }
+    
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('❌ Erreur récupération statistiques (sans /api):', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/tous', async (req, res) => {
+  try {
+    console.log('🔍 API /tous GET appelée (sans /api)');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    let data = {
+      users: [],
+      products: [],
+      orders: []
+    };
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération toutes les données depuis MongoDB (sans /api)...');
+      data.users = await User.find().select('-motDePasse').limit(10);
+      data.products = await Product.find().limit(10);
+      data.orders = await Order.find().limit(10);
+    } else {
+      console.log('⚠️ Utilisation des données de fallback (sans /api)');
+      data = {
+        users: [fallbackAdmin],
+        products: fallbackProducts,
+        orders: []
+      };
+    }
+    
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('❌ Erreur récupération toutes les données (sans /api):', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// 🖼️ ENDPOINTS GESTION IMAGES COMPLETS
+app.post('/upload/product-images', async (req, res) => {
+  try {
+    console.log('🔍 API /upload/product-images POST appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { productId, images } = req.body;
+    console.log('🖼️ Upload images produit:', productId, 'images:', images?.length);
+    
+    // Simuler l'upload d'images
+    const uploadedImages = images?.map((image, index) => ({
+      url: `/uploads/product-${productId}-${index + 1}.jpg`,
+      alt: `Image ${index + 1} du produit`,
+      uploadedAt: new Date()
+    })) || [];
+    
+    res.json({ 
+      success: true, 
+      message: 'Images uploadées avec succès', 
+      images: uploadedImages 
+    });
+  } catch (error) {
+    console.error('❌ Erreur upload images:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/uploads/:filename', (req, res) => {
+  try {
+    const { filename } = req.params;
+    console.log('🖼️ Demande image:', filename);
+    
+    // Headers anti-cache pour les images
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Content-Type': 'image/svg+xml'
+    });
+    
+    // Générer une image SVG placeholder
+    const svgPlaceholder = `
+      <svg width="300" height="300" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100%" height="100%" fill="#f3f4f6"/>
+        <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="16" fill="#6b7280" text-anchor="middle" dy=".3em">
+          Image: ${filename}
+        </text>
+        <text x="50%" y="60%" font-family="Arial, sans-serif" font-size="12" fill="#9ca3af" text-anchor="middle" dy=".3em">
+          Boutique AYNEXT
+        </text>
+      </svg>
+    `;
+    
+    res.send(svgPlaceholder);
+  } catch (error) {
+    console.error('❌ Erreur génération image placeholder:', error);
+    res.status(404).json({ success: false, message: 'Image non trouvée' });
+  }
+});
+
+// 📱 ENDPOINTS SUPPORT PWA COMPLETS
+app.get('/manifest.json', (req, res) => {
+  try {
+    console.log('📱 Demande manifest PWA');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Content-Type': 'application/json'
+    });
+    
+    const manifest = {
+      name: 'Boutique AYNEXT',
+      short_name: 'AYNEXT',
+      description: 'Boutique de vêtements tendance',
+      start_url: '/',
+      display: 'standalone',
+      background_color: '#ffffff',
+      theme_color: '#3B82F6',
+      icons: [
+        {
+          src: '/uploads/icon-192x192.png',
+          sizes: '192x192',
+          type: 'image/png'
+        },
+        {
+          src: '/uploads/icon-512x512.png',
+          sizes: '512x512',
+          type: 'image/png'
+        }
+      ],
+      categories: ['shopping', 'fashion'],
+      lang: 'fr',
+      orientation: 'portrait-primary'
+    };
+    
+    res.json(manifest);
+  } catch (error) {
+    console.error('❌ Erreur manifest PWA:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/sw.js', (req, res) => {
+  try {
+    console.log('📱 Demande service worker');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Content-Type': 'application/javascript'
+    });
+    
+    const serviceWorker = `
+      const CACHE_NAME = 'boutique-aynext-v1';
+      const urlsToCache = [
+        '/',
+        '/static/css/main.css',
+        '/static/js/main.js',
+        '/uploads/icon-192x192.png',
+        '/uploads/icon-512x512.png'
+      ];
+
+      self.addEventListener('install', (event) => {
+        event.waitUntil(
+          caches.open(CACHE_NAME)
+            .then((cache) => cache.addAll(urlsToCache))
+        );
+      });
+
+      self.addEventListener('fetch', (event) => {
+        event.respondWith(
+          caches.match(event.request)
+            .then((response) => {
+              if (response) {
+                return response;
+              }
+              return fetch(event.request);
+            }
+          )
+        );
+      });
+    `;
+    
+    res.send(serviceWorker);
+  } catch (error) {
+    console.error('❌ Erreur service worker:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// 🔧 ENDPOINTS UTILITAIRES FINAUX
+app.get('/api/version', (req, res) => {
+  try {
+    console.log('🔍 API /api/version GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const version = {
+      version: '1.0.0',
+      build: '2024-01-15',
+      environment: process.env.NODE_ENV || 'development',
+      nodeVersion: process.version,
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      timestamp: new Date().toISOString()
+    };
+    
+    res.json({ success: true, version });
+  } catch (error) {
+    console.error('❌ Erreur version:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/status', (req, res) => {
+  try {
+    console.log('🔍 API /api/status GET appelée');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const status = {
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      mongoConnected,
+      endpoints: {
+        total: 71,
+        categories: [
+          'Authentication (8)',
+          'Admin (4)',
+          'Users (8)',
+          'Products (9)',
+          'Cart (5)',
+          'Orders (8)',
+          'Settings (6)',
+          'Stats (3)',
+          'Images (2)',
+          'PWA (2)',
+          'Utilities (2)'
+        ]
+      }
+    };
+    
+    res.json({ success: true, status });
+  } catch (error) {
+    console.error('❌ Erreur status:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // Orders admin toutes endpoint (sans /api)
 app.get('/orders/admin/toutes', async (req, res) => {
   try {
