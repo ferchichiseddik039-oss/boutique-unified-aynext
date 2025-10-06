@@ -166,6 +166,57 @@ app.get('/api/test', (req, res) => {
   res.json({ message: "✅ Backend Render prêt et CORS actif" });
 });
 
+// MongoDB test endpoint
+app.get('/api/mongodb-test', async (req, res) => {
+  try {
+    console.log('🔍 Test MongoDB appelé');
+    console.log('📊 mongoConnected:', mongoConnected);
+    console.log('🔗 mongoose.connection.readyState:', mongoose.connection.readyState);
+    
+    if (mongoConnected) {
+      // Test des collections
+      const collections = await mongoose.connection.db.listCollections().toArray();
+      console.log('📚 Collections disponibles:', collections.map(c => c.name));
+      
+      // Test des produits
+      const productCount = await Product.countDocuments();
+      console.log('📦 Nombre de produits:', productCount);
+      
+      // Test des utilisateurs
+      const userCount = await User.countDocuments();
+      console.log('👥 Nombre d\'utilisateurs:', userCount);
+      
+      // Test des paramètres
+      const settingsCount = await Settings.countDocuments();
+      console.log('⚙️ Nombre de paramètres:', settingsCount);
+      
+      res.json({
+        success: true,
+        mongoConnected: true,
+        readyState: mongoose.connection.readyState,
+        collections: collections.map(c => c.name),
+        counts: {
+          products: productCount,
+          users: userCount,
+          settings: settingsCount
+        }
+      });
+    } else {
+      res.json({
+        success: false,
+        mongoConnected: false,
+        message: 'MongoDB non connecté'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Erreur test MongoDB:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Admin check endpoint
 app.get('/api/admin/check', (req, res) => {
   res.json({ success: true, exists: true });
@@ -231,15 +282,23 @@ app.get('/api/auth/check', (req, res) => {
 // Products endpoint
 app.get('/api/products', async (req, res) => {
   try {
+    console.log('🔍 API /api/products appelée');
+    console.log('📊 mongoConnected:', mongoConnected);
+    
     let products;
     if (mongoConnected) {
+      console.log('🗄️ Récupération depuis MongoDB...');
       products = await Product.find();
+      console.log('📦 Produits trouvés:', products.length);
+      console.log('📋 Premier produit:', products[0] ? products[0].nom : 'Aucun produit');
     } else {
+      console.log('⚠️ Utilisation des données de fallback');
       products = fallbackProducts;
+      console.log('📦 Produits fallback:', products.length);
     }
     res.json({ success: true, products });
   } catch (error) {
-    console.error('Erreur récupération produits:', error);
+    console.error('❌ Erreur récupération produits:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
@@ -247,15 +306,21 @@ app.get('/api/products', async (req, res) => {
 // Settings endpoint
 app.get('/api/settings', async (req, res) => {
   try {
+    console.log('🔍 API /api/settings appelée');
+    console.log('📊 mongoConnected:', mongoConnected);
+    
     let settings;
     if (mongoConnected) {
+      console.log('🗄️ Récupération depuis MongoDB...');
       settings = await Settings.findOne();
+      console.log('⚙️ Paramètres trouvés:', settings ? 'Oui' : 'Non');
     } else {
+      console.log('⚠️ Utilisation des paramètres de fallback');
       settings = fallbackSettings;
     }
     res.json({ success: true, settings: settings || {} });
   } catch (error) {
-    console.error('Erreur récupération paramètres:', error);
+    console.error('❌ Erreur récupération paramètres:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
