@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -27,21 +28,16 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 // Middleware CORS
 app.use(cors({
-  origin: [
-    'https://frontend-vercel-2dhm5wym8-seddik-s-projects-c94a56ab.vercel.app',
-    'https://frontend-vercel-qi8v4xnmn-seddik-s-projects-c94a56ab.vercel.app',
-    'https://frontend-vercel-n9rf7647y-seddik-s-projects-c94a56ab.vercel.app',
-    'https://frontend-vercel-ogaxzobmd-seddik-s-projects-c94a56ab.vercel.app',
-    'https://frontend-vercel-qq0w8733v-seddik-s-projects-c94a56ab.vercel.app',
-    'https://frontend-vercel-a1r2xvt24-seddik-s-projects-c94a56ab.vercel.app',
-    'https://frontend-vercel-1m52v3e0y-seddik-s-projects-c94a56ab.vercel.app',
-    'http://localhost:3000'
-  ],
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve static files from the React build folder
+app.use(express.static(path.join(__dirname, '../frontend/build')));
 
 // Dummy Models (used if MongoDB is disconnected, or for fallback data)
 const User = mongoose.models.User || mongoose.model('User', new mongoose.Schema({
@@ -375,7 +371,14 @@ app.post('/api/products', (req, res) => {
   }
 });
 
+// All other GET requests not handled by API routes will return your React app
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
+});
+
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Serveur démarré sur le port ${PORT}`);
+  console.log(`🚀 Serveur unifié démarré sur le port ${PORT}`);
+  console.log(`📱 Frontend accessible sur: http://localhost:${PORT}`);
+  console.log(`🔧 API accessible sur: http://localhost:${PORT}/api`);
 });
