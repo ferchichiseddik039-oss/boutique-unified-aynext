@@ -288,6 +288,13 @@ app.get('/api/products', async (req, res) => {
     console.log('🔍 API /api/products appelée');
     console.log('📊 mongoConnected:', mongoConnected);
     
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
     let products;
     if (mongoConnected) {
       console.log('🗄️ Récupération depuis MongoDB...');
@@ -311,6 +318,13 @@ app.get('/api/settings', async (req, res) => {
   try {
     console.log('🔍 API /api/settings appelée');
     console.log('📊 mongoConnected:', mongoConnected);
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     
     let settings;
     if (mongoConnected) {
@@ -353,6 +367,13 @@ app.get('/api/users', async (req, res) => {
     console.log('🔍 API /api/users appelée');
     console.log('📊 mongoConnected:', mongoConnected);
     
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
     let users;
     if (mongoConnected) {
       console.log('🗄️ Récupération depuis MongoDB...');
@@ -375,6 +396,13 @@ app.get('/api/orders', async (req, res) => {
     console.log('🔍 API /api/orders appelée');
     console.log('📊 mongoConnected:', mongoConnected);
     
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
     // Pour l'instant, retourner des commandes vides
     // Tu peux ajouter un modèle Order plus tard
     const orders = [];
@@ -392,6 +420,13 @@ app.get('/api/stats', async (req, res) => {
   try {
     console.log('🔍 API /api/stats appelée');
     console.log('📊 mongoConnected:', mongoConnected);
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     
     let stats = {
       totalUsers: 0,
