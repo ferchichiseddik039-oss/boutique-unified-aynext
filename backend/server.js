@@ -1,13 +1,12 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 5001;
 
 
 let mongoConnected = false;
@@ -27,33 +26,41 @@ mongoose.connect(process.env.MONGODB_URI, {
   mongoConnected = false;
 });
 
-// Configuration CORS propre
+// ================================
+// ✅ CORS configuration (Render + Local)
+// ================================
 const allowedOrigins = [
-  "https://boutique-unified-aynext.onrender.com",
-  "http://localhost:3000",
-  "http://localhost:5001"
+  "https://boutique-unified-aynext.onrender.com", // frontend Render
+  "http://localhost:3000",                        // frontend local
+  "http://localhost:5001"                         // backend local
 ];
 
-app.use(cors({
-  origin: function(origin, callback){
-    // Permet requêtes depuis Postman ou scripts backend qui n'ont pas d'origine
-    if(!origin) return callback(null, true);
-    if(allowedOrigins.indexOf(origin) === -1){
-      const msg = 'CORS policy: cette origine n\'est pas autorisée.';
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"],
-  credentials: true
-}));
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type,Authorization,x-auth-token");
 
-// Preflight pour toutes les routes
-app.options("*", cors());
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+
+  next();
+});
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// ================================
+// ✅ Route test CORS
+// ================================
+app.get("/", (req, res) => {
+  res.json({ message: "✅ Backend Render prêt et CORS actif" });
+});
 
 // Serve static files from the React build folder
 app.use(express.static(path.join(__dirname, '../frontend/build')));
