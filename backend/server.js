@@ -64,6 +64,35 @@ app.use(express.static(path.join(__dirname, '../frontend/build')));
 // Serve uploaded images
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// Endpoint pour servir des images de démonstration
+app.get('/uploads/:filename', (req, res) => {
+  const { filename } = req.params;
+  console.log('🖼️ Demande d\'image:', filename);
+  
+  // Headers anti-cache pour les images
+  res.set({
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  });
+  
+  // Pour l'instant, retourner une image placeholder
+  const placeholderImage = `data:image/svg+xml;base64,${Buffer.from(`
+    <svg width="300" height="300" xmlns="http://www.w3.org/2000/svg">
+      <rect width="300" height="300" fill="#f0f0f0"/>
+      <text x="150" y="150" text-anchor="middle" font-family="Arial" font-size="16" fill="#666">
+        Image: ${filename}
+      </text>
+      <text x="150" y="180" text-anchor="middle" font-family="Arial" font-size="12" fill="#999">
+        AYNEXT Boutique
+      </text>
+    </svg>
+  `).toString('base64')}`;
+  
+  res.set('Content-Type', 'image/svg+xml');
+  res.send(Buffer.from(placeholderImage.split(',')[1], 'base64'));
+});
+
 // Dummy Models (used if MongoDB is disconnected, or for fallback data)
 const User = mongoose.models.User || mongoose.model('User', new mongoose.Schema({
   email: { type: String, required: true, unique: true },
@@ -89,6 +118,42 @@ const Settings = mongoose.models.Settings || mongoose.model('Settings', new mong
   reseauxSociaux: Object
 }));
 
+// Modèle Order pour les commandes
+const Order = mongoose.models.Order || mongoose.model('Order', new mongoose.Schema({
+  numeroCommande: { type: String, required: true, unique: true },
+  client: {
+    nom: String,
+    prenom: String,
+    email: String,
+    telephone: String,
+    adresse: {
+      rue: String,
+      ville: String,
+      codePostal: String,
+      pays: String
+    }
+  },
+  articles: [{
+    produit: {
+      _id: String,
+      nom: String,
+      prix: Number,
+      image: String
+    },
+    quantite: Number,
+    taille: String,
+    couleur: String,
+    prixTotal: Number
+  }],
+  statut: { type: String, default: 'en_attente' },
+  dateCommande: { type: Date, default: Date.now },
+  dateLivraison: Date,
+  totalCommande: Number,
+  fraisLivraison: Number,
+  methodePaiement: String,
+  notes: String
+}));
+
 // Fallback Data
 const fallbackAdmin = {
   _id: 'admin-123',
@@ -104,13 +169,14 @@ const fallbackProducts = [
     prix: 89.99,
     description: 'Hoodie de qualité premium avec logo AYNEXT personnalisable',
     images: [
-      'https://frontend-vercel-2dhm5wym8-seddik-s-projects-c94a56ab.vercel.app/hoodie-real.png',
-      'https://frontend-vercel-2dhm5wym8-seddik-s-projects-c94a56ab.vercel.app/hoodie-base.png'
+      '/uploads/hoodie-noir-1.jpg',
+      '/uploads/hoodie-noir-2.jpg'
     ],
     couleurs: ['Noir', 'Blanc', 'Gris'],
     tailles: ['S', 'M', 'L', 'XL'],
     categorie: 'Hoodies',
     marque: 'AYNEXT',
+    genre: 'homme',
     enStock: true
   },
   {
@@ -119,13 +185,46 @@ const fallbackProducts = [
     prix: 89.99,
     description: 'Hoodie blanc premium avec logo AYNEXT personnalisable',
     images: [
-      'https://frontend-vercel-2dhm5wym8-seddik-s-projects-c94a56ab.vercel.app/hoodie-white.jpg',
-      'https://frontend-vercel-2dhm5wym8-seddik-s-projects-c94a56ab.vercel.app/hoodie-simple.svg'
+      '/uploads/hoodie-blanc-1.jpg',
+      '/uploads/hoodie-blanc-2.jpg'
     ],
     couleurs: ['Blanc', 'Noir'],
     tailles: ['S', 'M', 'L', 'XL'],
     categorie: 'Hoodies',
     marque: 'AYNEXT',
+    genre: 'femme',
+    enStock: true
+  },
+  {
+    _id: 'product-3',
+    nom: 'T-shirt AYNEXT Sport',
+    prix: 29.99,
+    description: 'T-shirt sportif AYNEXT pour homme',
+    images: [
+      '/uploads/tshirt-sport-1.jpg',
+      '/uploads/tshirt-sport-2.jpg'
+    ],
+    couleurs: ['Noir', 'Blanc', 'Rouge'],
+    tailles: ['S', 'M', 'L', 'XL'],
+    categorie: 'T-shirts',
+    marque: 'AYNEXT',
+    genre: 'homme',
+    enStock: true
+  },
+  {
+    _id: 'product-4',
+    nom: 'Sweat AYNEXT Femme',
+    prix: 49.99,
+    description: 'Sweat confortable pour femme',
+    images: [
+      '/uploads/sweat-femme-1.jpg',
+      '/uploads/sweat-femme-2.jpg'
+    ],
+    couleurs: ['Rose', 'Blanc', 'Gris'],
+    tailles: ['S', 'M', 'L', 'XL'],
+    categorie: 'Sweats',
+    marque: 'AYNEXT',
+    genre: 'femme',
     enStock: true
   }
 ];
@@ -301,6 +400,14 @@ app.get('/api/products', async (req, res) => {
       products = await Product.find();
       console.log('📦 Produits trouvés:', products.length);
       console.log('📋 Premier produit:', products[0] ? products[0].nom : 'Aucun produit');
+      
+      // S'assurer que les produits ont des images
+      products = products.map(product => {
+        if (!product.images || product.images.length === 0) {
+          product.images = [`/uploads/product-${product._id}-1.jpg`];
+        }
+        return product;
+      });
     } else {
       console.log('⚠️ Utilisation des données de fallback');
       products = fallbackProducts;
@@ -1357,6 +1464,220 @@ app.get('/api/users/admin/:userId/stats', async (req, res) => {
     res.json({ success: true, stats });
   } catch (error) {
     console.error('❌ Erreur stats utilisateur admin:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ================================
+// ENDPOINTS MANQUANTS CRITIQUES
+// ================================
+
+// Orders admin toutes endpoint (sans /api)
+app.get('/orders/admin/toutes', async (req, res) => {
+  try {
+    console.log('🔍 API /orders/admin/toutes GET appelée (sans /api)');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { limit = 10, page = 1, status, search } = req.query;
+    console.log('📦 Paramètres commandes admin:', { limit, page, status, search });
+    
+    let orders = [];
+    let total = 0;
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération commandes depuis MongoDB...');
+      // Construire le filtre
+      let filter = {};
+      if (status) filter.statut = status;
+      if (search) {
+        filter.$or = [
+          { 'client.nom': { $regex: search, $options: 'i' } },
+          { 'client.email': { $regex: search, $options: 'i' } },
+          { numeroCommande: { $regex: search, $options: 'i' } }
+        ];
+      }
+      
+      // Récupérer les commandes avec pagination
+      const skip = (page - 1) * limit;
+      orders = await Order.find(filter)
+        .sort({ dateCommande: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+      
+      total = await Order.countDocuments(filter);
+      console.log('📦 Commandes trouvées:', orders.length, 'Total:', total);
+    } else {
+      console.log('⚠️ Utilisation des commandes de fallback');
+      orders = [];
+      total = 0;
+    }
+    
+    res.json({ 
+      success: true, 
+      orders, 
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit)
+    });
+  } catch (error) {
+    console.error('❌ Erreur récupération commandes admin:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Products with category filter endpoint
+app.get('/api/products', async (req, res) => {
+  try {
+    console.log('🔍 API /api/products GET appelée avec filtres');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { category, brand, limit, genre, search } = req.query;
+    console.log('📦 Filtres produits:', { category, brand, limit, genre, search });
+    
+    let products = [];
+    let filter = {};
+    
+    // Construire le filtre
+    if (category) filter.categorie = category;
+    if (brand) filter.marque = brand;
+    if (genre) filter.genre = genre;
+    if (search) {
+      filter.$or = [
+        { nom: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { marque: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération produits depuis MongoDB avec filtre:', filter);
+      let query = Product.find(filter);
+      
+      if (limit) {
+        query = query.limit(parseInt(limit));
+      }
+      
+      products = await query.sort({ dateCreation: -1 });
+      console.log('📦 Produits trouvés:', products.length);
+    } else {
+      console.log('⚠️ Utilisation des produits de fallback');
+      products = fallbackProducts;
+      
+      // Appliquer les filtres sur les données de fallback
+      if (category) {
+        products = products.filter(p => p.categorie === category);
+      }
+      if (brand) {
+        products = products.filter(p => p.marque === brand);
+      }
+      if (genre) {
+        products = products.filter(p => p.genre === genre);
+      }
+      if (search) {
+        const searchLower = search.toLowerCase();
+        products = products.filter(p => 
+          p.nom.toLowerCase().includes(searchLower) ||
+          p.description.toLowerCase().includes(searchLower) ||
+          p.marque.toLowerCase().includes(searchLower)
+        );
+      }
+      if (limit) {
+        products = products.slice(0, parseInt(limit));
+      }
+      console.log('📦 Produits fallback filtrés:', products.length);
+    }
+    
+    res.json({ success: true, products });
+  } catch (error) {
+    console.error('❌ Erreur récupération produits avec filtres:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Products endpoint for collections (sans /api)
+app.get('/products', async (req, res) => {
+  try {
+    console.log('🔍 API /products GET appelée (sans /api)');
+    
+    // Headers anti-cache
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    const { category, brand, limit, genre, search } = req.query;
+    console.log('📦 Filtres produits collection:', { category, brand, limit, genre, search });
+    
+    let products = [];
+    let filter = {};
+    
+    // Construire le filtre
+    if (category) filter.categorie = category;
+    if (brand) filter.marque = brand;
+    if (genre) filter.genre = genre;
+    if (search) {
+      filter.$or = [
+        { nom: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { marque: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (mongoConnected) {
+      console.log('🗄️ Récupération produits collection depuis MongoDB avec filtre:', filter);
+      let query = Product.find(filter);
+      
+      if (limit) {
+        query = query.limit(parseInt(limit));
+      }
+      
+      products = await query.sort({ dateCreation: -1 });
+      console.log('📦 Produits collection trouvés:', products.length);
+    } else {
+      console.log('⚠️ Utilisation des produits de fallback pour collection');
+      products = fallbackProducts;
+      
+      // Appliquer les filtres sur les données de fallback
+      if (category) {
+        products = products.filter(p => p.categorie === category);
+      }
+      if (brand) {
+        products = products.filter(p => p.marque === brand);
+      }
+      if (genre) {
+        products = products.filter(p => p.genre === genre);
+      }
+      if (search) {
+        const searchLower = search.toLowerCase();
+        products = products.filter(p => 
+          p.nom.toLowerCase().includes(searchLower) ||
+          p.description.toLowerCase().includes(searchLower) ||
+          p.marque.toLowerCase().includes(searchLower)
+        );
+      }
+      if (limit) {
+        products = products.slice(0, parseInt(limit));
+      }
+      console.log('📦 Produits collection fallback filtrés:', products.length);
+    }
+    
+    res.json({ success: true, products });
+  } catch (error) {
+    console.error('❌ Erreur récupération produits collection:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
