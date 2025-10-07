@@ -442,10 +442,18 @@ app.get('/api/products', async (req, res) => {
         } else {
           console.log(`⚠️ Aucune image pour "${produitObj.nom}", ajout placeholder`);
           // Image par défaut si aucune image
+          const placeholderUrl = `https://via.placeholder.com/400x400/6366f1/ffffff?text=${encodeURIComponent(produitObj.nom || 'Produit')}`;
           produitObj.images = [{
-            url: 'https://via.placeholder.com/400x400?text=' + encodeURIComponent(produitObj.nom || 'Produit'),
+            url: placeholderUrl,
             alt: produitObj.nom || 'Image produit'
           }];
+          
+          // Sauvegarder automatiquement cette correction en base
+          if (mongoConnected && produitObj._id) {
+            Product.findByIdAndUpdate(produitObj._id, { images: produitObj.images })
+              .then(() => console.log(`💾 Image placeholder sauvegardée pour "${produitObj.nom}"`))
+              .catch(err => console.error(`❌ Erreur sauvegarde image pour "${produitObj.nom}":`, err));
+          }
         }
         return produitObj;
       });

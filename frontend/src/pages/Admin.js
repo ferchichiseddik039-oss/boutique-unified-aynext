@@ -722,8 +722,12 @@ const ProductsTab = ({ products, onProductAdded }) => {
                     src={mainImage} 
                     alt={product.images[0].alt || product.nom}
                     onError={(e) => {
+                      console.log('❌ Erreur chargement image:', mainImage);
                       e.target.style.display = 'none';
                       e.target.nextSibling.style.display = 'flex';
+                    }}
+                    onLoad={() => {
+                      console.log('✅ Image chargée avec succès:', mainImage);
                     }}
                   />
                 ) : null}
