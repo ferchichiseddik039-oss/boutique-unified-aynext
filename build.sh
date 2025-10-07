@@ -12,7 +12,7 @@ echo "🧹 Nettoyage des dépendances..."
 rm -rf node_modules package-lock.json
 
 echo "📥 Installation des dépendances avec résolutions..."
-npm install --legacy-peer-deps
+npm install --legacy-peer-deps --force
 
 # Corriger les permissions
 echo "🔐 Correction des permissions..."

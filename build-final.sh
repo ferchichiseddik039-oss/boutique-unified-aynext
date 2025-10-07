@@ -1,6 +1,8 @@
 #!/bin/bash
 # Script de build simple et fonctionnel pour Render
 
+set -e  # Arrêter en cas d'erreur
+
 echo "🚀 Démarrage du build..."
 
 # Installation des dépendances backend
@@ -23,11 +25,18 @@ npm install
 
 # Permissions
 echo "🔐 Permissions..."
-chmod +x node_modules/.bin/*
+chmod +x node_modules/.bin/* || true
 
-# Build simple
+# Build simple avec plus de debug
 echo "🏗️ Build React..."
+echo "📁 Répertoire actuel: $(pwd)"
+echo "📄 Contenu avant build:"
+ls -la
+
 CI=false GENERATE_SOURCEMAP=false npx react-scripts build
+
+echo "📄 Contenu après build:"
+ls -la
 
 # Vérifier que le build a réussi
 if [ -d "build" ]; then
