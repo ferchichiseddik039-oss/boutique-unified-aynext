@@ -5,7 +5,7 @@
   "main": "backend/server.js",
   "scripts": {
     "install": "cd backend && npm install && cd ../frontend && npm install",
-    "build": "cd frontend && npm install && CI=false GENERATE_SOURCEMAP=false npx react-scripts build",
+    "build": "cd frontend && npm install && chmod +x node_modules/.bin/* && CI=false GENERATE_SOURCEMAP=false npx react-scripts build",
     "build:yarn": "cd frontend && rm -rf node_modules yarn.lock && yarn install --ignore-engines && chmod +x node_modules/.bin/* && yarn build",
     "build:simple": "cd frontend && npm install && npx react-scripts build",
     "start": "node backend/server.js",
