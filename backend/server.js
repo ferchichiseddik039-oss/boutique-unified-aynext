@@ -59,7 +59,20 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static files from the React build folder
-app.use(express.static(path.join(__dirname, '../frontend/build')));
+const buildPath = path.join(__dirname, '../frontend/build');
+console.log('📁 Build path:', buildPath);
+
+// Vérifier que le dossier build existe
+const fs = require('fs');
+if (fs.existsSync(buildPath)) {
+  console.log('✅ Dossier build trouvé');
+  const files = fs.readdirSync(buildPath);
+  console.log('📄 Fichiers dans build:', files);
+} else {
+  console.log('❌ Dossier build non trouvé:', buildPath);
+}
+
+app.use(express.static(buildPath));
 
 // Serve uploaded images
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -5081,7 +5094,16 @@ app.get('/api/debug/database', async (req, res) => {
 
 // All other GET requests not handled by API routes will return your React app
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
+  const indexPath = path.join(__dirname, '../frontend/build', 'index.html');
+  console.log('🔍 Demande de fichier:', req.path, '-> index.html');
+  
+  if (fs.existsSync(indexPath)) {
+    console.log('✅ Envoi de index.html');
+    res.sendFile(indexPath);
+  } else {
+    console.log('❌ index.html non trouvé:', indexPath);
+    res.status(404).send('Application non trouvée. Vérifiez que le build a réussi.');
+  }
 });
 
 // Start server - Attendre la connexion MongoDB

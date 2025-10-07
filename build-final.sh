@@ -29,6 +29,31 @@ chmod +x node_modules/.bin/*
 echo "🏗️ Build React..."
 CI=false GENERATE_SOURCEMAP=false npx react-scripts build
 
+# Vérifier que le build a réussi
+if [ -d "build" ]; then
+  echo "✅ Dossier build créé avec succès"
+  echo "📄 Fichiers dans build:"
+  ls -la build/
+  
+  # Vérifier les fichiers essentiels
+  if [ -f "build/index.html" ]; then
+    echo "✅ index.html trouvé"
+  else
+    echo "❌ index.html manquant"
+  fi
+  
+  if [ -d "build/static" ]; then
+    echo "✅ Dossier static trouvé"
+    echo "📄 Fichiers JS dans static/js:"
+    ls -la build/static/js/ || echo "Aucun fichier JS trouvé"
+  else
+    echo "❌ Dossier static manquant"
+  fi
+else
+  echo "❌ Dossier build non créé - Build échoué"
+  exit 1
+fi
+
 cd ..
 
 echo "✅ Build terminé avec succès!"
