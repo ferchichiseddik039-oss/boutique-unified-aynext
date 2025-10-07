@@ -4,6 +4,7 @@ import { FaEdit, FaSave, FaTimes, FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, F
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import { formatBrand } from '../utils/formatUtils';
+import api from '../config/axios';
 import '../styles/Profile.css';
 
 const Profile = () => {
@@ -28,15 +29,10 @@ const Profile = () => {
       setLoading(true);
       
       // Charger les commandes
-      const ordersResponse = await fetch('/api/orders', {
-        headers: {
-          'x-auth-token': localStorage.getItem('token')
-        }
-      });
+      const ordersResponse = await api.get('/api/orders');
       
-      if (ordersResponse.ok) {
-        const ordersData = await ordersResponse.json();
-        setOrders(ordersData.orders);
+      if (ordersResponse.data.success) {
+        setOrders(ordersResponse.data.orders || ordersResponse.data.commandes || []);
       }
 
       // Charger la liste de souhaits depuis l'API (vide pour le moment)

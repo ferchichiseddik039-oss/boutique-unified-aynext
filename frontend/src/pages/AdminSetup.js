@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaUserShield, FaEye, FaEyeSlash, FaEnvelope, FaLock, FaUser, FaPhone, FaMapMarkerAlt, FaShieldAlt } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import api from '../config/axios';
 import '../styles/AdminSetup.css';
 
 const AdminSetup = () => {
@@ -38,9 +39,8 @@ const AdminSetup = () => {
 
   const checkAdminExists = async () => {
     try {
-      const response = await fetch('/api/admin/check');
-      const data = await response.json();
-      setAdminExists(data.exists);
+      const response = await api.get('/api/admin/check');
+      setAdminExists(response.data.exists);
     } catch (error) {
       console.error('Erreur lors de la vérification admin:', error);
     }
@@ -133,24 +133,16 @@ const AdminSetup = () => {
     setLoading(true);
     
     try {
-      const response = await fetch('/api/admin/setup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          role: 'admin'
-        })
+      const response = await api.post('/api/admin/setup', {
+        ...formData,
+        role: 'admin'
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
+      if (response.data.success) {
         toast.success('Compte administrateur créé avec succès !');
         navigate('/admin/login');
       } else {
-        toast.error(data.message || 'Erreur lors de la création du compte admin');
+        toast.error(response.data.message || 'Erreur lors de la création du compte admin');
       }
     } catch (error) {
       toast.error('Erreur de connexion');

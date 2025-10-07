@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useOrders } from '../contexts/OrdersContext';
 import { FaBox, FaClock, FaCheck, FaTruck, FaTimes, FaEye, FaSearch, FaFilter, FaShoppingBag, FaCalendarAlt, FaMapMarkerAlt, FaCreditCard } from 'react-icons/fa';
+import api from '../config/axios';
 import '../styles/OrdersPage.css';
 
 const Orders = () => {
@@ -191,17 +192,10 @@ const Orders = () => {
                       console.log('Timestamp:', new Date().toISOString());
                       
                       // Test direct du serveur
-                      fetch('/api/orders', {
-                        headers: {
-                          'x-auth-token': localStorage.getItem('token') || 'no-token'
-                        }
-                      })
+                      api.get('/api/orders')
                       .then(response => {
                         console.log('📊 Test serveur:', response.status, response.statusText);
-                        return response.text();
-                      })
-                      .then(data => {
-                        console.log('📄 Réponse serveur:', data.substring(0, 200));
+                        console.log('📄 Réponse serveur:', JSON.stringify(response.data).substring(0, 200));
                       })
                       .catch(error => {
                         console.log('❌ Erreur test serveur:', error.message);

@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatBrand, formatCategory } from '../utils/formatUtils';
+import api from '../config/axios';
 import '../styles/ProductDetail.css';
 
 const ProductDetail = () => {
@@ -28,13 +29,13 @@ const ProductDetail = () => {
   const fetchProduct = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/products/${id}`);
-      const data = await response.json();
+      const response = await api.get(`/api/products/${id}`);
       
-      if (response.ok) {
-        setProduct(data);
+      if (response.data.success) {
+        setProduct(response.data.product || response.data);
         // Charger les produits similaires
-        fetchRelatedProducts(data.categorie, data.marque);
+        const productData = response.data.product || response.data;
+        fetchRelatedProducts(productData.categorie, productData.marque);
       } else {
         toast.error('Produit non trouvé');
         navigate('/products');
@@ -49,10 +50,10 @@ const ProductDetail = () => {
 
   const fetchRelatedProducts = async (category, brand) => {
     try {
-      const response = await fetch(`/api/products?category=${category}&brand=${brand}&limit=4`);
-      const data = await response.json();
-      if (response.ok) {
-        setRelatedProducts(data.products.filter(p => p._id !== id));
+      const response = await api.get(`/api/products?category=${category}&brand=${brand}&limit=4`);
+      if (response.data.success) {
+        const products = response.data.products || response.data.produits || [];
+        setRelatedProducts(products.filter(p => p._id !== id));
       }
     } catch (error) {
       console.error('Erreur lors du chargement des produits similaires');

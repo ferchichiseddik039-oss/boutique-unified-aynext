@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useOrders } from '../contexts/OrdersContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { formatBrand } from '../utils/formatUtils';
+import api from '../config/axios';
 import '../styles/Cart.css';
 
 const Cart = () => {
@@ -509,37 +510,29 @@ const CheckoutSection = ({ cart, total, shipping, onClose, onSuccess, getActiveP
 
       console.log('📤 Envoi des données de commande:', orderData);
 
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-auth-token': localStorage.getItem('token')
-        },
-        body: JSON.stringify(orderData)
-      });
+      const response = await api.post('/api/orders', orderData);
 
       console.log('📥 Réponse du serveur:', response.status, response.statusText);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ Erreur du serveur:', errorData);
+      if (!response.data.success) {
+        console.error('❌ Erreur du serveur:', response.data);
         
         // Afficher les erreurs de validation détaillées
-        if (errorData.errors && errorData.errors.length > 0) {
+        if (response.data.errors && response.data.errors.length > 0) {
           console.error('📋 Erreurs de validation détaillées:');
-          errorData.errors.forEach((error, index) => {
+          response.data.errors.forEach((error, index) => {
             console.error(`${index + 1}. ${error.msg} (${error.param})`);
           });
           
           // Afficher la première erreur à l'utilisateur
-          const firstError = errorData.errors[0];
+          const firstError = response.data.errors[0];
           throw new Error(`${firstError.param}: ${firstError.msg}`);
         }
         
-        throw new Error(errorData.message || 'Erreur lors de la création de la commande');
+        throw new Error(response.data.message || 'Erreur lors de la création de la commande');
       }
 
-      const result = await response.json();
+      const result = response.data;
       console.log('✅ Commande créée avec succès:', result);
       
       toast.success('Commande passée avec succès !');
