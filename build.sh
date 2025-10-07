@@ -11,8 +11,8 @@ cd frontend
 echo "🧹 Nettoyage des dépendances..."
 rm -rf node_modules package-lock.json
 
-echo "📥 Installation des dépendances..."
-npm install
+echo "📥 Installation des dépendances avec résolutions..."
+npm install --legacy-peer-deps
 
 # Corriger les permissions
 echo "🔐 Correction des permissions..."
