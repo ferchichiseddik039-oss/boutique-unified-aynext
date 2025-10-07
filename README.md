@@ -1,36 +1,67 @@
-# 🛍️ Boutique AYNEXT - Application Unifiée
+# Boutique Vêtements - AYNEXT
 
-Application e-commerce unifiée combinant React (frontend) et Express (backend) pour la boutique de vêtements AYNEXT.
+Application e-commerce complète avec personnalisation de vêtements.
 
-## 🚀 Déploiement Render
+## 🚀 Démarrage Rapide
 
-### Configuration requise :
-- Node.js 18+
-- MongoDB Atlas
-- Compte Render.com
-
-### Variables d'environnement :
-```
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/boutique-vetements
-JWT_SECRET=your_jwt_secret_key_here_2024
-NODE_ENV=production
-PORT=10000
-```
-
-### Commandes :
+### Installation
 ```bash
+# Installer les dépendances backend
+cd backend
 npm install
-npm run build
+
+# Installer les dépendances frontend
+cd ../frontend
+npm install
+```
+
+### Développement
+```bash
+# Démarrer le backend (port 5001)
+cd backend
+npm run dev
+
+# Démarrer le frontend (port 3000)
+cd frontend
 npm start
 ```
 
-## 📱 Fonctionnalités
-- ✅ Frontend React avec personnalisation de hoodies
-- ✅ Backend Express avec API REST
-- ✅ Authentification admin/client
-- ✅ Gestion des produits et commandes
-- ✅ Base de données MongoDB Atlas
+### Production
+```bash
+# Build du frontend
+cd frontend
+npm run build
 
-## 🔗 URLs
-- **Local :** http://localhost:5001
-- **Render :** https://boutique-aynext-unified.onrender.com
+# Démarrer le serveur unifié
+npm start
+```
+
+## 🛠️ Technologies
+
+- **Frontend**: React 18, Tailwind CSS
+- **Backend**: Node.js, Express
+- **Base de données**: MongoDB Atlas
+- **Authentification**: JWT
+
+## 📁 Structure
+
+```
+boutique-unified/
+├── backend/          # API Express
+├── frontend/         # Application React
+└── README.md
+```
+
+## 🔧 Configuration
+
+1. Créer un fichier `.env` dans le dossier `backend/` :
+```
+MONGODB_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
+PORT=5001
+```
+
+2. Créer un fichier `.env` dans le dossier `frontend/` :
+```
+REACT_APP_API_URL=http://localhost:5001
+```

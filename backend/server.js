@@ -59,76 +59,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static files from the React build folder
-const buildPath = path.join(__dirname, '../frontend/build');
-console.log('📁 Build path:', buildPath);
-
-// Middleware pour logger toutes les requêtes
-app.use((req, res, next) => {
-  console.log(`📥 ${req.method} ${req.path}`);
-  
-  // Debug spécial pour les fichiers statiques
-  if (req.path.includes('static/')) {
-    console.log(`🔍 Fichier statique demandé: ${req.path}`);
-    const fullPath = path.join(buildPath, req.path);
-    console.log(`🔍 Chemin complet: ${fullPath}`);
-    console.log(`🔍 Fichier existe: ${fs.existsSync(fullPath)}`);
-  }
-  
-  next();
-});
-
-// Vérifier que le dossier build existe
-const fs = require('fs');
-if (fs.existsSync(buildPath)) {
-  console.log('✅ Dossier build trouvé');
-  const files = fs.readdirSync(buildPath);
-  console.log('📄 Fichiers dans build:', files);
-  
-  // Vérifier le dossier static
-  const staticPath = path.join(buildPath, 'static');
-  if (fs.existsSync(staticPath)) {
-    console.log('✅ Dossier static trouvé');
-    const staticFiles = fs.readdirSync(staticPath);
-    console.log('📄 Dossiers dans static:', staticFiles);
-    
-    // Vérifier les fichiers JS
-    const jsPath = path.join(staticPath, 'js');
-    if (fs.existsSync(jsPath)) {
-      const jsFiles = fs.readdirSync(jsPath);
-      console.log('📄 Fichiers JS:', jsFiles);
-    } else {
-      console.log('❌ Dossier js non trouvé');
-    }
-    
-    // Vérifier les fichiers CSS
-    const cssPath = path.join(staticPath, 'css');
-    if (fs.existsSync(cssPath)) {
-      const cssFiles = fs.readdirSync(cssPath);
-      console.log('📄 Fichiers CSS:', cssFiles);
-    } else {
-      console.log('❌ Dossier css non trouvé');
-    }
-  } else {
-    console.log('❌ Dossier static non trouvé');
-  }
-} else {
-  console.log('❌ Dossier build non trouvé:', buildPath);
-}
-
-// Servir les fichiers statiques avec headers anti-cache
-app.use(express.static(buildPath, {
-  maxAge: 0,
-  etag: false,
-  lastModified: false,
-  setHeaders: (res, path) => {
-    // Headers anti-cache pour tous les fichiers statiques
-    res.set({
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    });
-  }
-}));
+app.use(express.static(path.join(__dirname, '../frontend/build')));
 
 // Serve uploaded images
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -5149,24 +5080,8 @@ app.get('/api/debug/database', async (req, res) => {
 });
 
 // All other GET requests not handled by API routes will return your React app
-// IMPORTANT: Cette route doit être la DERNIÈRE pour ne pas intercepter les fichiers statiques
 app.get('*', (req, res) => {
-  // Ne pas traiter les fichiers statiques (qui ont une extension)
-  if (req.path.includes('.')) {
-    console.log('🚫 Fichier statique demandé mais non trouvé:', req.path);
-    return res.status(404).send('Fichier non trouvé');
-  }
-  
-  const indexPath = path.join(__dirname, '../frontend/build', 'index.html');
-  console.log('🔍 Route React demandée:', req.path, '-> index.html');
-  
-  if (fs.existsSync(indexPath)) {
-    console.log('✅ Envoi de index.html');
-    res.sendFile(indexPath);
-  } else {
-    console.log('❌ index.html non trouvé:', indexPath);
-    res.status(404).send('Application non trouvée. Vérifiez que le build a réussi.');
-  }
+  res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
 });
 
 // Start server - Attendre la connexion MongoDB
