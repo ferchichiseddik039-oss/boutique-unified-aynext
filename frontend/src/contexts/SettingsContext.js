@@ -212,6 +212,23 @@ export const SettingsProvider = ({ children }) => {
     getSettings();
   }, []);
 
+  // 🔧 FONCTIONS UTILITAIRES POUR MAINTENANCEMODE
+  const isMaintenanceMode = () => {
+    return settings?.boutique?.modeVacances || false;
+  };
+
+  const getMaintenanceMessage = () => {
+    return settings?.boutique?.messageVacances || 'Nous sommes actuellement en maintenance. Nous reviendrons bientôt !';
+  };
+
+  const getShopInfo = () => {
+    return {
+      nomBoutique: settings?.boutique?.nomBoutique || 'AYNEXT',
+      email: settings?.boutique?.email || 'contact@aynext.com',
+      telephone: settings?.boutique?.telephone || ''
+    };
+  };
+
   const value = {
     settings,
     stats,
@@ -234,7 +251,11 @@ export const SettingsProvider = ({ children }) => {
     testMongoDB,
     // 📱 Appels API PWA
     getManifest,
-    getServiceWorker
+    getServiceWorker,
+    // 🔧 Fonctions utilitaires pour MaintenanceMode
+    isMaintenanceMode,
+    getMaintenanceMessage,
+    getShopInfo
   };
 
   return (
