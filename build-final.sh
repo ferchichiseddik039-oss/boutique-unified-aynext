@@ -1,41 +1,34 @@
 #!/bin/bash
-# Script de build final et définitif pour Render
+# Script de build simple et fonctionnel pour Render
 
-set -e  # Arrêter en cas d'erreur
-
-echo "🚀 Démarrage du build final..."
+echo "🚀 Démarrage du build..."
 
 # Installation des dépendances backend
 echo "📦 Installation backend..."
 cd backend
-npm install --production
+npm install
 cd ..
 
 # Build du frontend
 echo "📦 Build frontend..."
 cd frontend
 
-# Nettoyage complet
-echo "🧹 Nettoyage complet..."
+# Nettoyage simple
+echo "🧹 Nettoyage..."
 rm -rf node_modules package-lock.json
 
-# Installation avec configuration optimisée
+# Installation simple
 echo "📥 Installation frontend..."
-npm install --legacy-peer-deps --force --no-audit --no-fund
+npm install
 
-# Vérification des permissions
-echo "🔐 Vérification permissions..."
-chmod +x node_modules/.bin/* || true
+# Permissions
+echo "🔐 Permissions..."
+chmod +x node_modules/.bin/*
 
-# Build avec configuration minimale
+# Build simple
 echo "🏗️ Build React..."
-SKIP_PREFLIGHT_CHECK=true \
-CI=false \
-GENERATE_SOURCEMAP=false \
-DISABLE_ESLINT_PLUGIN=true \
-npm run build
+CI=false GENERATE_SOURCEMAP=false npx react-scripts build
 
 cd ..
 
 echo "✅ Build terminé avec succès!"
-echo "🎉 Application prête pour le déploiement!"

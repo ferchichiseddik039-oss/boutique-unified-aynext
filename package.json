@@ -13,8 +13,7 @@
     "test": "echo \"No tests specified\" && exit 0"
   },
   "engines": {
-    "node": "16.x",
-    "npm": "8.x"
+    "node": "16.x"
   },
   "keywords": [
     "e-commerce",
