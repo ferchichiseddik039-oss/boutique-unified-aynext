@@ -11,12 +11,8 @@ cd frontend
 echo "🧹 Nettoyage des dépendances..."
 rm -rf node_modules package-lock.json
 
-echo "📥 Installation des dépendances avec résolutions forcées..."
-npm install --force
-
-# Forcer l'installation des bonnes versions
-echo "🔧 Installation des versions compatibles..."
-npm install ajv@6.12.6 ajv-keywords@3.5.2 schema-utils@3.3.0 --save --force
+echo "📥 Installation des dépendances..."
+npm install
 
 # Corriger les permissions
 echo "🔐 Correction des permissions..."
