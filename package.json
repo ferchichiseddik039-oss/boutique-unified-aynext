@@ -5,14 +5,14 @@
   "main": "backend/server.js",
   "scripts": {
     "install": "cd backend && npm install && cd ../frontend && npm install",
-    "build": "cd frontend && rm -rf node_modules package-lock.json && npm install && chmod +x node_modules/.bin/* && npm run build",
+    "build": "cd frontend && rm -rf node_modules package-lock.json && npm install --force && npm install ajv@6.12.6 ajv-keywords@3.5.2 schema-utils@3.3.0 --save --force && chmod +x node_modules/.bin/* && npm run build",
     "build:simple": "cd frontend && npm install && npx react-scripts build",
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
     "test": "echo \"No tests specified\" && exit 0"
   },
   "engines": {
-    "node": "20.x"
+    "node": "18.x"
   },
   "keywords": [
     "e-commerce",
