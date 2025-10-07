@@ -1,7 +1,10 @@
 import axios from 'axios';
 
 // Configuration API avec URL du backend Render
-const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
+// On utilise juste le domaine sans /api, car les routes incluent déjà /api dans leur path
+const API_BASE_URL = process.env.REACT_APP_API_URL 
+  ? process.env.REACT_APP_API_URL.replace(/\/api\/?$/, '') // Enlever /api à la fin s'il existe
+  : '';
 
 // Configuration de base pour axios
 const api = axios.create({

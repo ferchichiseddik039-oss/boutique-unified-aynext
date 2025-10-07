@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
   // Charger les informations de l'utilisateur
   const loadUser = async () => {
     try {
-      const res = await api.get('/auth/check');
+      const res = await api.get('/api/auth/check');
       if (res.data.success) {
         setUser(res.data.user);
       } else {
@@ -157,7 +157,7 @@ export const AuthProvider = ({ children }) => {
   const updateProfile = async (profileData) => {
     try {
       setLoading(true);
-      const res = await api.put('/users/profile', profileData);
+      const res = await api.put('/api/users/profile', profileData);
       if (res.data.success) {
         toast.success('Profil mis à jour !');
         return { success: true };
@@ -174,7 +174,7 @@ export const AuthProvider = ({ children }) => {
   const changePassword = async (passwordData) => {
     try {
       setLoading(true);
-      const res = await api.put('/users/password', passwordData);
+      const res = await api.put('/api/users/password', passwordData);
       if (res.data.success) {
         toast.success('Mot de passe mis à jour !');
         return { success: true };
