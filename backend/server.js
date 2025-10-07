@@ -58,15 +58,24 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Middleware pour logger toutes les requêtes
-app.use((req, res, next) => {
-  console.log(`📥 ${req.method} ${req.path} - ${req.headers['user-agent']?.substring(0, 50)}...`);
-  next();
-});
-
 // Serve static files from the React build folder
 const buildPath = path.join(__dirname, '../frontend/build');
 console.log('📁 Build path:', buildPath);
+
+// Middleware pour logger toutes les requêtes
+app.use((req, res, next) => {
+  console.log(`📥 ${req.method} ${req.path}`);
+  
+  // Debug spécial pour les fichiers statiques
+  if (req.path.includes('static/')) {
+    console.log(`🔍 Fichier statique demandé: ${req.path}`);
+    const fullPath = path.join(buildPath, req.path);
+    console.log(`🔍 Chemin complet: ${fullPath}`);
+    console.log(`🔍 Fichier existe: ${fs.existsSync(fullPath)}`);
+  }
+  
+  next();
+});
 
 // Vérifier que le dossier build existe
 const fs = require('fs');
@@ -74,6 +83,34 @@ if (fs.existsSync(buildPath)) {
   console.log('✅ Dossier build trouvé');
   const files = fs.readdirSync(buildPath);
   console.log('📄 Fichiers dans build:', files);
+  
+  // Vérifier le dossier static
+  const staticPath = path.join(buildPath, 'static');
+  if (fs.existsSync(staticPath)) {
+    console.log('✅ Dossier static trouvé');
+    const staticFiles = fs.readdirSync(staticPath);
+    console.log('📄 Dossiers dans static:', staticFiles);
+    
+    // Vérifier les fichiers JS
+    const jsPath = path.join(staticPath, 'js');
+    if (fs.existsSync(jsPath)) {
+      const jsFiles = fs.readdirSync(jsPath);
+      console.log('📄 Fichiers JS:', jsFiles);
+    } else {
+      console.log('❌ Dossier js non trouvé');
+    }
+    
+    // Vérifier les fichiers CSS
+    const cssPath = path.join(staticPath, 'css');
+    if (fs.existsSync(cssPath)) {
+      const cssFiles = fs.readdirSync(cssPath);
+      console.log('📄 Fichiers CSS:', cssFiles);
+    } else {
+      console.log('❌ Dossier css non trouvé');
+    }
+  } else {
+    console.log('❌ Dossier static non trouvé');
+  }
 } else {
   console.log('❌ Dossier build non trouvé:', buildPath);
 }
