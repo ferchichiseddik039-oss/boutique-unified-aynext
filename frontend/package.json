@@ -3,11 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@apideck/better-ajv-errors": "^0.3.6",
     "@testing-library/jest-dom": "^5.16.4",
     "@testing-library/react": "^13.3.0",
     "@testing-library/user-event": "^13.5.0",
-    "ajv": "^6.12.6",
     "axios": "^1.3.4",
     "baseline-browser-mapping": "^1.0.0",
     "browserslist": "^4.24.0",
@@ -22,8 +20,8 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "CI=false GENERATE_SOURCEMAP=false npx react-scripts build",
-    "build:linux": "CI=false GENERATE_SOURCEMAP=false npx react-scripts build",
+    "build": "SKIP_PREFLIGHT_CHECK=true CI=false GENERATE_SOURCEMAP=false npx react-scripts build",
+    "build:linux": "SKIP_PREFLIGHT_CHECK=true CI=false GENERATE_SOURCEMAP=false npx react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -57,12 +55,5 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "webpack": "5.75.0"
-  },
-  "resolutions": {
-    "ajv": "^6.12.6",
-    "workbox-webpack-plugin": "^6.5.4"
-  },
-  "overrides": {
-    "ajv": "^6.12.6"
   }
 }

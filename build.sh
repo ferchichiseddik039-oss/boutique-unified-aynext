@@ -19,7 +19,7 @@ echo "🔐 Correction des permissions..."
 chmod +x node_modules/.bin/*
 
 echo "🏗️ Build avec npx..."
-CI=false GENERATE_SOURCEMAP=false npx react-scripts build
+SKIP_PREFLIGHT_CHECK=true CI=false GENERATE_SOURCEMAP=false npx react-scripts build
 
 cd ..
 
