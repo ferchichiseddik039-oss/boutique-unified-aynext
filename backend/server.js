@@ -58,6 +58,12 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Middleware pour logger toutes les requêtes
+app.use((req, res, next) => {
+  console.log(`📥 ${req.method} ${req.path} - ${req.headers['user-agent']?.substring(0, 50)}...`);
+  next();
+});
+
 // Serve static files from the React build folder
 const buildPath = path.join(__dirname, '../frontend/build');
 console.log('📁 Build path:', buildPath);
@@ -72,7 +78,20 @@ if (fs.existsSync(buildPath)) {
   console.log('❌ Dossier build non trouvé:', buildPath);
 }
 
-app.use(express.static(buildPath));
+// Servir les fichiers statiques avec headers anti-cache
+app.use(express.static(buildPath, {
+  maxAge: 0,
+  etag: false,
+  lastModified: false,
+  setHeaders: (res, path) => {
+    // Headers anti-cache pour tous les fichiers statiques
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+  }
+}));
 
 // Serve uploaded images
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -5093,9 +5112,16 @@ app.get('/api/debug/database', async (req, res) => {
 });
 
 // All other GET requests not handled by API routes will return your React app
+// IMPORTANT: Cette route doit être la DERNIÈRE pour ne pas intercepter les fichiers statiques
 app.get('*', (req, res) => {
+  // Ne pas traiter les fichiers statiques (qui ont une extension)
+  if (req.path.includes('.')) {
+    console.log('🚫 Fichier statique demandé mais non trouvé:', req.path);
+    return res.status(404).send('Fichier non trouvé');
+  }
+  
   const indexPath = path.join(__dirname, '../frontend/build', 'index.html');
-  console.log('🔍 Demande de fichier:', req.path, '-> index.html');
+  console.log('🔍 Route React demandée:', req.path, '-> index.html');
   
   if (fs.existsSync(indexPath)) {
     console.log('✅ Envoi de index.html');
