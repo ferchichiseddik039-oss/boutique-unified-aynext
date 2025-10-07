@@ -4988,6 +4988,97 @@ app.put('/api/orders/:id/statut', async (req, res) => {
   }
 });
 
+// Debug endpoint pour analyser la base de données
+app.get('/api/debug/database', async (req, res) => {
+  try {
+    console.log('🔍 Debug database endpoint appelé');
+    
+    if (!mongoConnected) {
+      return res.json({
+        success: false,
+        message: 'MongoDB non connecté',
+        mongoConnected: false,
+        mode: 'fallback'
+      });
+    }
+
+    // Analyser les produits
+    const totalProducts = await Product.countDocuments();
+    const productsWithImages = await Product.countDocuments({
+      images: { $exists: true, $ne: [], $size: { $gt: 0 } }
+    });
+    const productsWithoutImages = await Product.countDocuments({
+      $or: [
+        { images: { $exists: false } },
+        { images: { $size: 0 } },
+        { images: [] }
+      ]
+    });
+
+    // Analyser les types d'images
+    const productsWithStringImages = await Product.find({
+      'images.0': { $type: 'string' }
+    });
+
+    const productsWithObjectImages = await Product.find({
+      'images.0.url': { $exists: true }
+    });
+
+    // Détails des premiers produits
+    const sampleProducts = await Product.find().limit(5).lean();
+
+    // Statistiques par catégorie
+    const categoryStats = await Product.aggregate([
+      { $group: { 
+        _id: '$categorie', 
+        count: { $sum: 1 },
+        withImages: { 
+          $sum: { 
+            $cond: [
+              { $and: [
+                { $isArray: '$images' },
+                { $gt: [{ $size: '$images' }, 0] }
+              ]}, 
+              1, 
+              0
+            ]
+          }
+        }
+      }},
+      { $sort: { count: -1 } }
+    ]);
+
+    res.json({
+      success: true,
+      mongoConnected: true,
+      analysis: {
+        totalProducts,
+        productsWithImages,
+        productsWithoutImages,
+        imageFormats: {
+          stringImages: productsWithStringImages.length,
+          objectImages: productsWithObjectImages.length
+        },
+        sampleProducts,
+        categoryStats,
+        recommendations: {
+          needsPlaceholders: productsWithoutImages > 0,
+          needsFormatConversion: productsWithStringImages.length > 0,
+          allGood: productsWithObjectImages.length === totalProducts && productsWithoutImages === 0
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur debug database:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'analyse',
+      error: error.message
+    });
+  }
+});
+
 // All other GET requests not handled by API routes will return your React app
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
