@@ -613,6 +613,10 @@ const ProductsTab = ({ products, onProductAdded }) => {
   // Log pour débogage
   console.log('ProductsTab - Produits reçus:', products);
   console.log('ProductsTab - Nombre de produits:', products?.length || 0);
+  console.log('ProductsTab - Premier produit:', products?.[0]);
+  if (products?.[0]) {
+    console.log('ProductsTab - Images du premier produit:', products[0].images);
+  }
 
   // Mettre à jour la liste des produits quand les props changent
   useEffect(() => {

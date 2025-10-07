@@ -419,20 +419,28 @@ app.get('/api/products', async (req, res) => {
       products = await Product.find();
       console.log('📦 Produits trouvés:', products.length);
       console.log('📋 Premier produit:', products[0] ? products[0].nom : 'Aucun produit');
+      if (products[0]) {
+        console.log('🖼️ Images du premier produit:', products[0].images);
+        console.log('📝 Structure complète du premier produit:', JSON.stringify(products[0], null, 2));
+      }
       
       // S'assurer que les produits ont des images au bon format
       products = products.map(product => {
         const produitObj = product.toObject ? product.toObject() : product;
+        console.log(`🖼️ Traitement images pour produit "${produitObj.nom}":`, produitObj.images);
         
         // Si images est un tableau de strings, le convertir en tableau d'objets
         if (produitObj.images && produitObj.images.length > 0) {
           if (typeof produitObj.images[0] === 'string') {
+            console.log(`📝 Conversion string vers objet pour "${produitObj.nom}"`);
             produitObj.images = produitObj.images.map(img => ({
               url: img,
               alt: produitObj.nom || 'Image produit'
             }));
           }
+          console.log(`✅ Images finales pour "${produitObj.nom}":`, produitObj.images);
         } else {
+          console.log(`⚠️ Aucune image pour "${produitObj.nom}", ajout placeholder`);
           // Image par défaut si aucune image
           produitObj.images = [{
             url: 'https://via.placeholder.com/400x400?text=' + encodeURIComponent(produitObj.nom || 'Produit'),
