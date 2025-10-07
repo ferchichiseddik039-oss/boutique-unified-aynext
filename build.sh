@@ -6,6 +6,12 @@ npm install
 
 echo "📦 Build du frontend..."
 cd frontend
+
+# Nettoyer les dépendances pour éviter les conflits
+echo "🧹 Nettoyage des dépendances..."
+rm -rf node_modules package-lock.json
+
+echo "📥 Installation des dépendances..."
 npm install
 
 # Corriger les permissions
@@ -13,7 +19,7 @@ echo "🔐 Correction des permissions..."
 chmod +x node_modules/.bin/*
 
 echo "🏗️ Build avec npx..."
-CI=false npx react-scripts build
+CI=false GENERATE_SOURCEMAP=false npx react-scripts build
 
 cd ..
 
