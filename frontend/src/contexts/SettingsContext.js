@@ -72,7 +72,7 @@ export const SettingsProvider = ({ children }) => {
 
   const testSettings = async (testData) => {
     try {
-      const res = await api.put('/settings/test', testData);
+      const res = await api.put('/api/settings/test', testData);
       return res.data;
     } catch (err) {
       console.error('Erreur test paramètres:', err);
@@ -83,7 +83,7 @@ export const SettingsProvider = ({ children }) => {
   const resetSettings = async () => {
     try {
       setLoading(true);
-      const res = await api.post('/settings/reset');
+      const res = await api.post('/api/settings/reset');
       if (res.data.success) {
         setSettings(null);
         toast.success('Paramètres réinitialisés !');
@@ -117,7 +117,7 @@ export const SettingsProvider = ({ children }) => {
 
   const getBasicStats = async () => {
     try {
-      const res = await api.get('/stats');
+      const res = await api.get('/api/stats');
       return res.data;
     } catch (err) {
       console.error('Erreur récupération stats de base:', err);
@@ -127,7 +127,7 @@ export const SettingsProvider = ({ children }) => {
 
   const getAllData = async () => {
     try {
-      const res = await api.get('/tous');
+      const res = await api.get('/api/tous');
       return res.data;
     } catch (err) {
       console.error('Erreur récupération toutes les données:', err);
