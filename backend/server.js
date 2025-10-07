@@ -101,15 +101,34 @@ const User = mongoose.models.User || mongoose.model('User', new mongoose.Schema(
 }));
 
 const Product = mongoose.models.Product || mongoose.model('Product', new mongoose.Schema({
-  nom: String,
-  prix: Number,
+  nom: { type: String, required: true },
   description: String,
-  images: [String],
-  categories: [String],
-  marques: [String],
-  tailles: [String],
-  couleurs: [String],
-  stock: Number
+  prix: { type: Number, required: true },
+  prixReduit: Number,
+  images: [{
+    url: String,
+    alt: String
+  }],
+  categorie: String,
+  sousCategorie: String,
+  marque: String,
+  materiau: String,
+  entretien: String,
+  tailles: [{
+    nom: String,
+    stock: Number
+  }],
+  couleurs: [{
+    nom: String,
+    code: String
+  }],
+  stock: { type: Number, default: 0 },
+  estEnPromotion: { type: Boolean, default: false },
+  estNouveau: { type: Boolean, default: false },
+  estPopulaire: { type: Boolean, default: false },
+  tags: [String],
+  enStock: { type: Boolean, default: true },
+  dateAjout: { type: Date, default: Date.now }
 }));
 
 const Settings = mongoose.models.Settings || mongoose.model('Settings', new mongoose.Schema({
@@ -401,19 +420,39 @@ app.get('/api/products', async (req, res) => {
       console.log('📦 Produits trouvés:', products.length);
       console.log('📋 Premier produit:', products[0] ? products[0].nom : 'Aucun produit');
       
-      // S'assurer que les produits ont des images
+      // S'assurer que les produits ont des images au bon format
       products = products.map(product => {
-        if (!product.images || product.images.length === 0) {
-          product.images = [`/uploads/product-${product._id}-1.jpg`];
+        const produitObj = product.toObject ? product.toObject() : product;
+        
+        // Si images est un tableau de strings, le convertir en tableau d'objets
+        if (produitObj.images && produitObj.images.length > 0) {
+          if (typeof produitObj.images[0] === 'string') {
+            produitObj.images = produitObj.images.map(img => ({
+              url: img,
+              alt: produitObj.nom || 'Image produit'
+            }));
+          }
+        } else {
+          // Image par défaut si aucune image
+          produitObj.images = [{
+            url: 'https://via.placeholder.com/400x400?text=' + encodeURIComponent(produitObj.nom || 'Produit'),
+            alt: produitObj.nom || 'Image produit'
+          }];
         }
-        return product;
+        return produitObj;
       });
     } else {
       console.log('⚠️ Utilisation des données de fallback');
-      products = fallbackProducts;
+      products = fallbackProducts.map(product => ({
+        ...product,
+        images: product.images ? product.images.map(img => ({
+          url: img,
+          alt: product.nom || 'Image produit'
+        })) : []
+      }));
       console.log('📦 Produits fallback:', products.length);
     }
-    res.json({ success: true, products });
+    res.json({ success: true, products, produits: products });
   } catch (error) {
     console.error('❌ Erreur récupération produits:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -4672,7 +4711,7 @@ app.get('/api/orders', (req, res) => {
 });
 
 // Admin orders endpoint
-app.get('/api/orders/admin/toutes', (req, res) => {
+app.get('/api/orders/admin/toutes', async (req, res) => {
   const token = req.headers['x-auth-token'];
   if (!token) {
     return res.status(401).json({ success: false, message: "Token d'authentification requis" });
@@ -4683,10 +4722,44 @@ app.get('/api/orders/admin/toutes', (req, res) => {
     if (decoded.role !== 'admin') {
       return res.status(403).json({ success: false, message: "Accès administrateur requis" });
     }
-    // Retourner des commandes vides pour l'instant
-    res.json({ success: true, orders: [], total: 0 });
-  } catch (jwtError) {
-    res.status(401).json({ success: false, message: "Token invalide ou expiré" });
+    
+    console.log('📦 Récupération des commandes admin');
+    
+    if (mongoConnected) {
+      // Récupérer les commandes depuis MongoDB
+      const { limit, page, statut } = req.query;
+      const query = {};
+      if (statut) query.statut = statut;
+      
+      const limitNum = parseInt(limit) || 50;
+      const pageNum = parseInt(page) || 1;
+      const skip = (pageNum - 1) * limitNum;
+      
+      const orders = await Order.find(query)
+        .sort({ dateCommande: -1 })
+        .limit(limitNum)
+        .skip(skip);
+        
+      const total = await Order.countDocuments(query);
+      
+      console.log(`✅ ${orders.length} commandes trouvées sur ${total}`);
+      
+      res.json({ 
+        success: true, 
+        commandes: orders,
+        orders: orders, // Pour compatibilité
+        total: total,
+        page: pageNum,
+        pages: Math.ceil(total / limitNum)
+      });
+    } else {
+      // Mode fallback - retourner un tableau vide
+      console.log('⚠️ Mode fallback - pas de commandes');
+      res.json({ success: true, commandes: [], orders: [], total: 0 });
+    }
+  } catch (error) {
+    console.error('❌ Erreur récupération commandes:', error);
+    res.status(500).json({ success: false, message: "Erreur serveur", error: error.message });
   }
 });
 
@@ -4703,23 +4776,33 @@ app.post('/api/upload/product-images', (req, res) => {
       return res.status(403).json({ success: false, message: "Accès administrateur requis" });
     }
     
-    // Pour l'instant, retourner des URLs d'images fictives
+    console.log('📤 Upload d\'images produit demandé');
+    
+    // Pour l'instant, retourner des URLs d'images placeholder fonctionnelles
+    // Dans une vraie implémentation, on utiliserait multer ou un service comme Cloudinary
+    const timestamp = Date.now();
     const mockImages = [
-      'https://frontend-vercel-2dhm5wym8-seddik-s-projects-c94a56ab.vercel.app/hoodie-real.png',
-      'https://frontend-vercel-2dhm5wym8-seddik-s-projects-c94a56ab.vercel.app/hoodie-base.png'
+      `https://via.placeholder.com/800x800/000000/FFFFFF?text=Image+1+${timestamp}`,
+      `https://via.placeholder.com/800x800/333333/FFFFFF?text=Image+2+${timestamp}`
     ];
+    
+    console.log('✅ Images mockées générées:', mockImages.length);
     
     res.json({ 
       success: true, 
-      images: mockImages.map(url => ({ url, filename: url.split('/').pop() }))
+      images: mockImages.map((url, idx) => ({ 
+        url, 
+        filename: `product-image-${timestamp}-${idx}.jpg`
+      }))
     });
   } catch (jwtError) {
+    console.error('❌ Erreur JWT upload:', jwtError);
     res.status(401).json({ success: false, message: "Token invalide ou expiré" });
   }
 });
 
 // Product creation endpoint
-app.post('/api/products', (req, res) => {
+app.post('/api/products', async (req, res) => {
   const token = req.headers['x-auth-token'];
   if (!token) {
     return res.status(401).json({ success: false, message: "Token d'authentification requis" });
@@ -4732,14 +4815,160 @@ app.post('/api/products', (req, res) => {
     }
     
     const productData = req.body;
-    // Pour l'instant, juste retourner un succès
-    res.json({ 
-      success: true, 
-      message: "Produit créé avec succès",
-      product: { _id: 'new-product-' + Date.now(), ...productData }
-    });
-  } catch (jwtError) {
-    res.status(401).json({ success: false, message: "Token invalide ou expiré" });
+    console.log('📦 Création de produit:', productData.nom);
+    
+    if (mongoConnected) {
+      // Créer le produit dans MongoDB
+      const newProduct = new Product({
+        nom: productData.nom,
+        description: productData.description,
+        prix: productData.prix,
+        prixReduit: productData.prixReduit,
+        images: productData.images || [],
+        categorie: productData.categorie,
+        sousCategorie: productData.sousCategorie,
+        marque: productData.marque,
+        materiau: productData.materiau,
+        entretien: productData.entretien,
+        tailles: productData.tailles || [],
+        couleurs: productData.couleurs || [],
+        stock: productData.stock || 0,
+        estEnPromotion: productData.estEnPromotion || false,
+        estNouveau: productData.estNouveau || false,
+        estPopulaire: productData.estPopulaire || false,
+        tags: productData.tags || [],
+        enStock: true,
+        dateAjout: new Date()
+      });
+      
+      const savedProduct = await newProduct.save();
+      console.log('✅ Produit créé avec succès:', savedProduct._id);
+      
+      res.status(201).json(savedProduct);
+    } else {
+      // Mode fallback - retourner un produit mock
+      const mockProduct = { 
+        _id: 'product-' + Date.now(), 
+        ...productData,
+        dateAjout: new Date()
+      };
+      res.status(201).json(mockProduct);
+    }
+  } catch (error) {
+    console.error('❌ Erreur création produit:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur', error: error.message });
+  }
+});
+
+// Product update endpoint
+app.put('/api/products/:id', async (req, res) => {
+  const token = req.headers['x-auth-token'];
+  if (!token) {
+    return res.status(401).json({ success: false, message: "Token d'authentification requis" });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_2024');
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, message: "Accès administrateur requis" });
+    }
+    
+    const { id } = req.params;
+    const productData = req.body;
+    console.log('📝 Mise à jour produit:', id);
+    
+    if (mongoConnected) {
+      const updatedProduct = await Product.findByIdAndUpdate(
+        id,
+        { $set: productData },
+        { new: true, runValidators: true }
+      );
+      
+      if (!updatedProduct) {
+        return res.status(404).json({ success: false, message: 'Produit non trouvé' });
+      }
+      
+      console.log('✅ Produit mis à jour:', updatedProduct._id);
+      res.json({ success: true, product: updatedProduct });
+    } else {
+      res.json({ success: true, product: { _id: id, ...productData } });
+    }
+  } catch (error) {
+    console.error('❌ Erreur mise à jour produit:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur', error: error.message });
+  }
+});
+
+// Product delete endpoint
+app.delete('/api/products/:id', async (req, res) => {
+  const token = req.headers['x-auth-token'];
+  if (!token) {
+    return res.status(401).json({ success: false, message: "Token d'authentification requis" });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_2024');
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, message: "Accès administrateur requis" });
+    }
+    
+    const { id } = req.params;
+    console.log('🗑️ Suppression produit:', id);
+    
+    if (mongoConnected) {
+      const deletedProduct = await Product.findByIdAndDelete(id);
+      
+      if (!deletedProduct) {
+        return res.status(404).json({ success: false, message: 'Produit non trouvé' });
+      }
+      
+      console.log('✅ Produit supprimé:', id);
+      res.json({ success: true, message: 'Produit supprimé avec succès' });
+    } else {
+      res.json({ success: true, message: 'Produit supprimé avec succès (mode fallback)' });
+    }
+  } catch (error) {
+    console.error('❌ Erreur suppression produit:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur', error: error.message });
+  }
+});
+
+// Order status update endpoint
+app.put('/api/orders/:id/statut', async (req, res) => {
+  const token = req.headers['x-auth-token'];
+  if (!token) {
+    return res.status(401).json({ success: false, message: "Token d'authentification requis" });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_2024');
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, message: "Accès administrateur requis" });
+    }
+    
+    const { id } = req.params;
+    const { statut } = req.body;
+    console.log('📝 Mise à jour statut commande:', id, 'vers', statut);
+    
+    if (mongoConnected) {
+      const updatedOrder = await Order.findByIdAndUpdate(
+        id,
+        { $set: { statut } },
+        { new: true }
+      );
+      
+      if (!updatedOrder) {
+        return res.status(404).json({ success: false, message: 'Commande non trouvée' });
+      }
+      
+      console.log('✅ Statut commande mis à jour:', updatedOrder._id);
+      res.json({ success: true, order: updatedOrder, commande: updatedOrder });
+    } else {
+      res.json({ success: true, order: { _id: id, statut }, commande: { _id: id, statut } });
+    }
+  } catch (error) {
+    console.error('❌ Erreur mise à jour statut commande:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur', error: error.message });
   }
 });
 
